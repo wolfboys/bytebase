@@ -22,7 +22,7 @@
 
         <div class="text-red-600 whitespace-nowrap">
           {{
-            $t("database.label-error.max-label-count-exceeded", {
+            $t("label.error.max-label-count-exceeded", {
               count: MAX_DATABASE_LABELS,
             })
           }}

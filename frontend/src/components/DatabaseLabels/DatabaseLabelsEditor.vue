@@ -5,7 +5,7 @@
       v-if="state.mode === 'VIEW' && state.labels.length === 0"
       class="text-sm text-control-placeholder"
     >
-      {{ $t("database.no-label") }}
+      {{ $t("label.no-label") }}
     </div>
     <div class="buttons flex items-center gap-1 ml-1 text-control">
       <template v-if="state.mode === 'VIEW'">

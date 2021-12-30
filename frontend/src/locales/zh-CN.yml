@@ -642,19 +642,6 @@ database:
   columns: 列
   indexes: 索引
   row-count-est: 估计行数
-  label-error:
-    key-necessary: 需要指定 Key
-    value-necessary: 需要指定值
-    key-duplicated: Key 重复了
-    value-duplicated: 值重复了
-    max-length-exceeded: 长度不能超过 {len} 字符
-    max-label-count-exceeded: 不能多于 {count} 个标签
-    cannot-edit-reserved-label: 不能编辑预留标签 "{key}"
-  label:
-    placeholder:
-      select-key: 选择 Key…
-      select-value: 选择值…
-      select-values: 选择值…
 repository:
   branch-observe-file-change: Bytebase 跟踪文件变更的分支。
   branch-specify-tip: '诀窍: 可以使用诸如 "feature/*" 这样的通配符'
@@ -921,6 +908,7 @@ sql-editor:
   self: SQL 编辑器
   select-connection: 请选择数据连接
 label:
+  no-label: 没有标签
   error:
     key-necessary: 需要指定 Key
     value-necessary: 需要指定值
