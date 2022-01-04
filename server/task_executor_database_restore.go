@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/bytebase/bytebase/api"
-	"github.com/bytebase/bytebase/common"
 	"github.com/bytebase/bytebase/plugin/db"
 	"go.uber.org/zap"
 )
@@ -54,6 +53,9 @@ func (exec *DatabaseRestoreTaskExecutor) RunOnce(ctx context.Context, server *Se
 	if err != nil {
 		return true, nil, fmt.Errorf("failed to find backup: %w", err)
 	}
+	if backup == nil {
+		return true, nil, fmt.Errorf("backup %v not found", payload.BackupID)
+	}
 
 	sourceDatabaseFind := &api.DatabaseFind{
 		ID: &backup.DatabaseID,
@@ -62,6 +64,9 @@ func (exec *DatabaseRestoreTaskExecutor) RunOnce(ctx context.Context, server *Se
 	if err != nil {
 		return true, nil, fmt.Errorf("failed to find database for the backup: %w", err)
 	}
+	if sourceDatabase == nil {
+		return true, nil, fmt.Errorf("source database ID not found %v", backup.DatabaseID)
+	}
 
 	targetDatabaseFind := &api.DatabaseFind{
 		InstanceID: &task.InstanceID,
@@ -69,10 +74,10 @@ func (exec *DatabaseRestoreTaskExecutor) RunOnce(ctx context.Context, server *Se
 	}
 	targetDatabase, err := server.composeDatabaseByFind(ctx, targetDatabaseFind)
 	if err != nil {
-		if common.ErrorCode(err) == common.NotFound {
-			return true, nil, fmt.Errorf("target database %q not found in instance %q: %w", payload.DatabaseName, task.Instance.Name, err)
-		}
 		return true, nil, fmt.Errorf("failed to find target database %q in instance %q: %w", payload.DatabaseName, task.Instance.Name, err)
+	}
+	if targetDatabase == nil {
+		return true, nil, fmt.Errorf("target database %q not found in instance %q: %w", payload.DatabaseName, task.Instance.Name, err)
 	}
 
 	exec.l.Debug("Start database restore from backup...",
@@ -160,10 +165,7 @@ func createBranchMigrationHistory(ctx context.Context, server *Server, sourceDat
 	}
 	issue, err := server.IssueService.FindIssue(ctx, issueFind)
 	if err != nil {
-		// Not all pipelines belong to an issue, so it's OK if ENOTFOUND
-		if common.ErrorCode(err) != common.NotFound {
-			return -1, "", fmt.Errorf("failed to fetch containing issue when creating the migration history: %v, err: %w", task.Name, err)
-		}
+		return -1, "", fmt.Errorf("failed to fetch containing issue when creating the migration history: %v, err: %w", task.Name, err)
 	}
 
 	// Add a branch migration history record.

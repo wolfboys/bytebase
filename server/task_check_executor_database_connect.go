@@ -30,6 +30,16 @@ func (exec *TaskCheckDatabaseConnectExecutor) Run(ctx context.Context, server *S
 	if err != nil {
 		return []api.TaskCheckResult{}, common.Errorf(common.Internal, err)
 	}
+	if task == nil {
+		return []api.TaskCheckResult{
+			{
+				Status:  api.TaskCheckStatusError,
+				Code:    common.Internal,
+				Title:   fmt.Sprintf("Failed to find task %v", taskCheckRun.TaskID),
+				Content: err.Error(),
+			},
+		}, nil
+	}
 
 	databaseFind := &api.DatabaseFind{
 		ID: task.DatabaseID,
@@ -37,6 +47,9 @@ func (exec *TaskCheckDatabaseConnectExecutor) Run(ctx context.Context, server *S
 	database, err := server.composeDatabaseByFind(ctx, databaseFind)
 	if err != nil {
 		return []api.TaskCheckResult{}, common.Errorf(common.Internal, err)
+	}
+	if database == nil {
+		return []api.TaskCheckResult{}, common.Errorf(common.Internal, fmt.Errorf("database ID not found %v", task.DatabaseID))
 	}
 
 	driver, err := getDatabaseDriver(ctx, database.Instance, database.Name, exec.l)

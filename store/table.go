@@ -62,7 +62,6 @@ func (s *TableService) FindTableList(ctx context.Context, find *api.TableFind) (
 }
 
 // FindTable retrieves a single table based on find.
-// Returns ENOTFOUND if no matching record.
 // Returns ECONFLICT if finding more than 1 matching records.
 func (s *TableService) FindTable(ctx context.Context, find *api.TableFind) (*api.Table, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -74,8 +73,10 @@ func (s *TableService) FindTable(ctx context.Context, find *api.TableFind) (*api
 	list, err := s.findTableList(ctx, tx, find)
 	if err != nil {
 		return nil, err
-	} else if len(list) == 0 {
-		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("table not found: %+v", find)}
+	}
+
+	if len(list) == 0 {
+		return nil, nil
 	} else if len(list) > 1 {
 		return nil, &common.Error{Code: common.Conflict, Err: fmt.Errorf("found %d tables with filter %+v, expect 1", len(list), find)}
 	}
@@ -83,7 +84,6 @@ func (s *TableService) FindTable(ctx context.Context, find *api.TableFind) (*api
 }
 
 // DeleteTable deletes an existing table by ID.
-// Returns ENOTFOUND if table does not exist.
 func (s *TableService) DeleteTable(ctx context.Context, delete *api.TableDelete) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -252,10 +252,8 @@ func (s *TableService) findTableList(ctx context.Context, tx *Tx, find *api.Tabl
 // deleteTable permanently deletes tables from a database.
 func deleteTable(ctx context.Context, tx *Tx, delete *api.TableDelete) error {
 	// Remove row from database.
-	_, err := tx.ExecContext(ctx, `DELETE FROM tbl WHERE database_id = ?`, delete.DatabaseID)
-	if err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM tbl WHERE database_id = ?`, delete.DatabaseID); err != nil {
 		return FormatError(err)
 	}
-
 	return nil
 }

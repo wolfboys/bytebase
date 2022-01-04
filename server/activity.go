@@ -30,10 +30,10 @@ func (s *Server) registerActivityRoutes(g *echo.Group) {
 			}
 			issue, err := s.IssueService.FindIssue(ctx, issueFind)
 			if err != nil {
-				if common.ErrorCode(err) == common.NotFound {
-					return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to find issue ID for creating the comment: %d", activityCreate.ContainerID))
-				}
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to fetch issue ID when creating the comment: %d", activityCreate.ContainerID)).SetInternal(err)
+			}
+			if issue == nil {
+				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to find issue ID for creating the comment: %d", activityCreate.ContainerID))
 			}
 
 			bytes, err := json.Marshal(api.ActivityIssueCommentCreatePayload{
@@ -144,11 +144,7 @@ func (s *Server) registerActivityRoutes(g *echo.Group) {
 			ID:        id,
 			DeleterID: c.Get(getPrincipalIDContextKey()).(int),
 		}
-		err = s.ActivityService.DeleteActivity(ctx, activityDelete)
-		if err != nil {
-			if common.ErrorCode(err) == common.NotFound {
-				return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("Activity ID not found: %d", id))
-			}
+		if err := s.ActivityService.DeleteActivity(ctx, activityDelete); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to delete activity ID: %v", id)).SetInternal(err)
 		}
 

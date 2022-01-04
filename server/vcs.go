@@ -9,7 +9,7 @@ import (
 
 	"github.com/bytebase/bytebase/api"
 	"github.com/bytebase/bytebase/common"
-	"github.com/bytebase/bytebase/external/gitlab"
+	"github.com/bytebase/bytebase/plugin/vcs"
 	"github.com/google/jsonapi"
 	"github.com/labstack/echo/v4"
 )
@@ -25,7 +25,7 @@ func (s *Server) registerVCSRoutes(g *echo.Group) {
 		}
 		// Trim ending "/"
 		vcsCreate.InstanceURL = strings.TrimRight(vcsCreate.InstanceURL, "/")
-		vcsCreate.APIURL = fmt.Sprintf("%s/%s", vcsCreate.InstanceURL, gitlab.APIPath)
+		vcsCreate.APIURL = vcs.Get(vcs.GitLabSelfHost, vcs.ProviderConfig{Logger: s.l}).APIURL(vcsCreate.InstanceURL)
 
 		vcs, err := s.VCSService.CreateVCS(ctx, vcsCreate)
 		if err != nil {
@@ -73,10 +73,10 @@ func (s *Server) registerVCSRoutes(g *echo.Group) {
 
 		vcs, err := s.composeVCSByID(ctx, id)
 		if err != nil {
-			if common.ErrorCode(err) == common.NotFound {
-				return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("VCS ID not found: %d", id))
-			}
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to fetch vcs ID: %v", id)).SetInternal(err)
+		}
+		if vcs == nil {
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("VCS ID not found: %d", id))
 		}
 
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
@@ -131,11 +131,7 @@ func (s *Server) registerVCSRoutes(g *echo.Group) {
 			ID:        id,
 			DeleterID: c.Get(getPrincipalIDContextKey()).(int),
 		}
-		err = s.VCSService.DeleteVCS(ctx, vcsDelete)
-		if err != nil {
-			if common.ErrorCode(err) == common.NotFound {
-				return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("VCS ID not found: %d", id))
-			}
+		if err := s.VCSService.DeleteVCS(ctx, vcsDelete); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to delete VCS ID: %v", id)).SetInternal(err)
 		}
 
@@ -182,10 +178,11 @@ func (s *Server) composeVCSByID(ctx context.Context, id int) (*api.VCS, error) {
 		return nil, err
 	}
 
-	if err := s.composeVCSRelationship(ctx, vcs); err != nil {
-		return nil, err
+	if vcs != nil {
+		if err := s.composeVCSRelationship(ctx, vcs); err != nil {
+			return nil, err
+		}
 	}
-
 	return vcs, nil
 }
 

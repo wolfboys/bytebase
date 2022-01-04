@@ -62,7 +62,6 @@ func (s *ProjectWebhookService) FindProjectWebhookList(ctx context.Context, find
 }
 
 // FindProjectWebhook retrieves a single projectWebhook based on find.
-// Returns ENOTFOUND if no matching record.
 // Returns ECONFLICT if finding more than 1 matching records.
 func (s *ProjectWebhookService) FindProjectWebhook(ctx context.Context, find *api.ProjectWebhookFind) (*api.ProjectWebhook, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -74,8 +73,10 @@ func (s *ProjectWebhookService) FindProjectWebhook(ctx context.Context, find *ap
 	list, err := findProjectWebhookList(ctx, tx, find)
 	if err != nil {
 		return nil, err
-	} else if len(list) == 0 {
-		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("project hook not found: %+v", find)}
+	}
+
+	if len(list) == 0 {
+		return nil, nil
 	} else if len(list) > 1 {
 		return nil, &common.Error{Code: common.Conflict, Err: fmt.Errorf("found %d project hooks with filter %+v, expect 1", len(list), find)}
 	}
@@ -104,7 +105,6 @@ func (s *ProjectWebhookService) PatchProjectWebhook(ctx context.Context, patch *
 }
 
 // DeleteProjectWebhook deletes an existing projectWebhook by ID.
-// Returns ENOTFOUND if projectWebhook does not exist.
 func (s *ProjectWebhookService) DeleteProjectWebhook(ctx context.Context, delete *api.ProjectWebhookDelete) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -304,15 +304,8 @@ func patchProjectWebhook(ctx context.Context, tx *Tx, patch *api.ProjectWebhookP
 // deleteProjectWebhook permanently deletes a projectWebhook by ID.
 func deleteProjectWebhook(ctx context.Context, tx *Tx, delete *api.ProjectWebhookDelete) error {
 	// Remove row from database.
-	result, err := tx.ExecContext(ctx, `DELETE FROM project_webhook WHERE id = ?`, delete.ID)
-	if err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM project_webhook WHERE id = ?`, delete.ID); err != nil {
 		return FormatError(err)
 	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return &common.Error{Code: common.NotFound, Err: fmt.Errorf("project hook ID not found: %d", delete.ID)}
-	}
-
 	return nil
 }

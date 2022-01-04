@@ -62,7 +62,6 @@ func (s *ActivityService) FindActivityList(ctx context.Context, find *api.Activi
 }
 
 // FindActivity retrieves a single activity based on find.
-// Returns ENOTFOUND if no matching record.
 // Returns ECONFLICT if finding more than 1 matching records.
 func (s *ActivityService) FindActivity(ctx context.Context, find *api.ActivityFind) (*api.Activity, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -74,8 +73,10 @@ func (s *ActivityService) FindActivity(ctx context.Context, find *api.ActivityFi
 	list, err := findActivityList(ctx, tx, find)
 	if err != nil {
 		return nil, err
-	} else if len(list) == 0 {
-		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("activity not found: %+v", find)}
+	}
+
+	if len(list) == 0 {
+		return nil, nil
 	} else if len(list) > 1 {
 		return nil, &common.Error{Code: common.Conflict, Err: fmt.Errorf("found %d activities with filter %+v, expect 1. ", len(list), find)}
 	}
@@ -104,7 +105,6 @@ func (s *ActivityService) PatchActivity(ctx context.Context, patch *api.Activity
 }
 
 // DeleteActivity deletes an existing activity by ID.
-// Returns ENOTFOUND if activity does not exist.
 func (s *ActivityService) DeleteActivity(ctx context.Context, delete *api.ActivityDelete) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -288,15 +288,8 @@ func patchActivity(ctx context.Context, tx *Tx, patch *api.ActivityPatch) (*api.
 // deleteActivity permanently deletes a activity by ID.
 func deleteActivity(ctx context.Context, tx *Tx, delete *api.ActivityDelete) error {
 	// Remove row from activity.
-	result, err := tx.ExecContext(ctx, `DELETE FROM activity WHERE id = ?`, delete.ID)
-	if err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM activity WHERE id = ?`, delete.ID); err != nil {
 		return FormatError(err)
 	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return &common.Error{Code: common.NotFound, Err: fmt.Errorf("activity ID not found: %d", delete.ID)}
-	}
-
 	return nil
 }

@@ -271,27 +271,27 @@ func (s *Server) syncEngineVersionAndSchema(ctx context.Context, instance *api.I
 						TableID:    &upsertedTable.ID,
 						Name:       &column.Name,
 					}
-					_, err := s.ColumnService.FindColumn(ctx, columnFind)
+					col, err := s.ColumnService.FindColumn(ctx, columnFind)
 					if err != nil {
-						if common.ErrorCode(err) == common.NotFound {
-							columnCreate := &api.ColumnCreate{
-								CreatorID:    api.SystemBotID,
-								DatabaseID:   database.ID,
-								TableID:      upsertedTable.ID,
-								Name:         column.Name,
-								Position:     column.Position,
-								Default:      column.Default,
-								Nullable:     column.Nullable,
-								Type:         column.Type,
-								CharacterSet: column.CharacterSet,
-								Collation:    column.Collation,
-								Comment:      column.Comment,
-							}
-							if err := createColumn(database, upsertedTable, columnCreate); err != nil {
-								return err
-							}
-						} else {
-							return fmt.Errorf("failed to sync column for instance: %s, database: %s, table: %s. Error %w", instance.Name, database.Name, upsertedTable.Name, err)
+						return fmt.Errorf("failed to sync column for instance: %s, database: %s, table: %s. Error %w", instance.Name, database.Name, upsertedTable.Name, err)
+					}
+					// Create column if not exists yet.
+					if col == nil {
+						columnCreate := &api.ColumnCreate{
+							CreatorID:    api.SystemBotID,
+							DatabaseID:   database.ID,
+							TableID:      upsertedTable.ID,
+							Name:         column.Name,
+							Position:     column.Position,
+							Default:      column.Default,
+							Nullable:     column.Nullable,
+							Type:         column.Type,
+							CharacterSet: column.CharacterSet,
+							Collation:    column.Collation,
+							Comment:      column.Comment,
+						}
+						if err := createColumn(database, upsertedTable, columnCreate); err != nil {
+							return err
 						}
 					}
 				}
@@ -304,26 +304,26 @@ func (s *Server) syncEngineVersionAndSchema(ctx context.Context, instance *api.I
 						Name:       &index.Name,
 						Expression: &index.Expression,
 					}
-					_, err := s.IndexService.FindIndex(ctx, indexFind)
+					idx, err := s.IndexService.FindIndex(ctx, indexFind)
 					if err != nil {
-						if common.ErrorCode(err) == common.NotFound {
-							indexCreate := &api.IndexCreate{
-								CreatorID:  api.SystemBotID,
-								DatabaseID: database.ID,
-								TableID:    upsertedTable.ID,
-								Name:       index.Name,
-								Expression: index.Expression,
-								Position:   index.Position,
-								Type:       index.Type,
-								Unique:     index.Unique,
-								Visible:    index.Visible,
-								Comment:    index.Comment,
-							}
-							if err := createIndex(database, upsertedTable, indexCreate); err != nil {
-								return err
-							}
-						} else {
-							return fmt.Errorf("failed to sync index for instance: %s, database: %s, table: %s. Error %w", instance.Name, database.Name, upsertedTable.Name, err)
+						return fmt.Errorf("failed to sync index for instance: %s, database: %s, table: %s. Error %w", instance.Name, database.Name, upsertedTable.Name, err)
+					}
+					if idx == nil {
+						// Create index if not exists.
+						indexCreate := &api.IndexCreate{
+							CreatorID:  api.SystemBotID,
+							DatabaseID: database.ID,
+							TableID:    upsertedTable.ID,
+							Name:       index.Name,
+							Expression: index.Expression,
+							Position:   index.Position,
+							Type:       index.Type,
+							Unique:     index.Unique,
+							Visible:    index.Visible,
+							Comment:    index.Comment,
+						}
+						if err := createIndex(database, upsertedTable, indexCreate); err != nil {
+							return err
 						}
 					}
 				}
@@ -447,8 +447,7 @@ func (s *Server) syncEngineVersionAndSchema(ctx context.Context, instance *api.I
 					tableDelete := &api.TableDelete{
 						DatabaseID: database.ID,
 					}
-					err = s.TableService.DeleteTable(ctx, tableDelete)
-					if err != nil {
+					if err := s.TableService.DeleteTable(ctx, tableDelete); err != nil {
 						return fmt.Errorf("failed to sync database for instance: %s. Failed to reset table info for database: %s. Error %w", instance.Name, database.Name, err)
 					}
 
@@ -462,8 +461,7 @@ func (s *Server) syncEngineVersionAndSchema(ctx context.Context, instance *api.I
 					viewDelete := &api.ViewDelete{
 						DatabaseID: database.ID,
 					}
-					err = s.ViewService.DeleteView(ctx, viewDelete)
-					if err != nil {
+					if err := s.ViewService.DeleteView(ctx, viewDelete); err != nil {
 						return fmt.Errorf("failed to sync database for instance: %s. Failed to reset view info for database: %s. Error %w", instance.Name, database.Name, err)
 					}
 

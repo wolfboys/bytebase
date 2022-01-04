@@ -62,7 +62,6 @@ func (s *VCSService) FindVCSList(ctx context.Context, find *api.VCSFind) ([]*api
 }
 
 // FindVCS retrieves a single vcs based on find.
-// Returns ENOTFOUND if no matching record.
 // Returns ECONFLICT if finding more than 1 matching records.
 func (s *VCSService) FindVCS(ctx context.Context, find *api.VCSFind) (*api.VCS, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -74,8 +73,10 @@ func (s *VCSService) FindVCS(ctx context.Context, find *api.VCSFind) (*api.VCS, 
 	list, err := findVCSList(ctx, tx, find)
 	if err != nil {
 		return nil, err
-	} else if len(list) == 0 {
-		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("vcs not found: %+v", find)}
+	}
+
+	if len(list) == 0 {
+		return nil, nil
 	} else if len(list) > 1 {
 		return nil, &common.Error{Code: common.Conflict, Err: fmt.Errorf("found %d vcss with filter %+v, expect 1", len(list), find)}
 	}
@@ -104,7 +105,6 @@ func (s *VCSService) PatchVCS(ctx context.Context, patch *api.VCSPatch) (*api.VC
 }
 
 // DeleteVCS deletes an existing vcs by ID.
-// Returns ENOTFOUND if vcs does not exist.
 func (s *VCSService) DeleteVCS(ctx context.Context, delete *api.VCSDelete) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -291,15 +291,8 @@ func patchVCS(ctx context.Context, tx *Tx, patch *api.VCSPatch) (*api.VCS, error
 // deleteVCS permanently deletes a vcs by ID.
 func deleteVCS(ctx context.Context, tx *Tx, delete *api.VCSDelete) error {
 	// Remove row from database.
-	result, err := tx.ExecContext(ctx, `DELETE FROM vcs WHERE id = ?`, delete.ID)
-	if err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM vcs WHERE id = ?`, delete.ID); err != nil {
 		return FormatError(err)
 	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return &common.Error{Code: common.NotFound, Err: fmt.Errorf("vcs ID not found: %d", delete.ID)}
-	}
-
 	return nil
 }
