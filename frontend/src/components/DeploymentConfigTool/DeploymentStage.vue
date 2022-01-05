@@ -1,4 +1,6 @@
 <template>
+  <!-- eslint-disable vue/no-mutating-props -->
+
   <div class="deployment-stage flex w-full relative">
     <div
       v-if="allowEdit"
@@ -19,19 +21,33 @@
         <heroicons-solid:arrow-circle-down class="w-6 h-6" />
       </button>
     </div>
-    <div class="main flex-1 space-y-2 py-2 overflow-hidden">
-      <slot name="header" />
-      <div
-        v-for="(selector, j) in deployment.spec.selector.matchExpressions"
-        :key="j"
-        class="flex content-start"
-      >
-        <SelectorItem
-          :editable="allowEdit"
-          :selector="selector"
-          :label-list="labelList"
-          @remove="removeSelector(selector)"
-        />
+    <div class="main flex-1 space-y-2 py-2 w-full">
+      <h3 v-if="showHeader" class="text-lg leading-6 font-medium text-main">
+        <template v-if="allowEdit">
+          <input
+            v-model="deployment.name"
+            type="text"
+            :placeholder="$t('deployment-config.name-placeholder')"
+            class="text-main rounded-md border-control-border focus:ring-control focus:border-control disabled:bg-gray-50"
+          />
+        </template>
+        <template v-else>
+          {{ deployment.name }}
+        </template>
+      </h3>
+      <div class="space-y-2 overflow-hidden">
+        <div
+          v-for="(selector, j) in deployment.spec.selector.matchExpressions"
+          :key="j"
+          class="flex content-start"
+        >
+          <SelectorItem
+            :editable="allowEdit"
+            :selector="selector"
+            :label-list="labelList"
+            @remove="removeSelector(selector)"
+          />
+        </div>
       </div>
       <button v-if="allowEdit" class="btn-normal btn-add" @click="addSelector">
         {{ $t("deployment-config.add-selector") }}
@@ -39,6 +55,7 @@
     </div>
 
     <span
+      v-if="allowEdit"
       class="absolute right-2 top-2 p-1 text-control cursor-pointer hover:bg-gray-200 rounded-sm"
       @click="$emit('remove')"
     >
@@ -67,11 +84,11 @@ export default defineComponent({
     },
     index: {
       type: Number,
-      required: true,
+      default: -1,
     },
     max: {
       type: Number,
-      required: true,
+      default: -1,
     },
     allowEdit: {
       type: Boolean,
@@ -84,6 +101,10 @@ export default defineComponent({
     labelList: {
       type: Array as PropType<AvailableLabel[]>,
       default: () => [],
+    },
+    showHeader: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ["remove", "prev", "next"],
@@ -98,11 +119,16 @@ export default defineComponent({
 
     const addSelector = () => {
       const array = props.deployment.spec.selector.matchExpressions;
-      array.push({
-        key: props.labelList[0]?.key || "",
+      const label = props.labelList[0];
+      const rule: LabelSelectorRequirement = {
+        key: label?.key || "",
         operator: "In",
         values: [],
-      });
+      };
+      if (label && label.valueList.length > 0) {
+        rule.values.push(label.valueList[0]);
+      }
+      array.push(rule);
     };
 
     return {

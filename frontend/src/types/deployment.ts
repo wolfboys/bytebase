@@ -28,6 +28,7 @@ export type DeploymentSchedule = {
 };
 
 export type Deployment = {
+  name: string;
   spec: DeploymentSpec;
 };
 

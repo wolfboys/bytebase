@@ -37,9 +37,9 @@
       :allow-edit="allowEdit"
     />
   </template>
-  <template v-else-if="selectedTab == DEPLOYMENT_CONFIGURATION_TAB">
-    <ProjectDeploymentConfigurationPanel
-      id="deployment-configuration"
+  <template v-else-if="selectedTab == DEPLOYMENT_CONFIG_TAB">
+    <ProjectDeploymentConfigPanel
+      id="deployment-config"
       :project="project"
       :allow-edit="allowEdit"
     />
@@ -56,7 +56,7 @@ import ProjectOverviewPanel from "../components/ProjectOverviewPanel.vue";
 import ProjectVersionControlPanel from "../components/ProjectVersionControlPanel.vue";
 import ProjectWebhookPanel from "../components/ProjectWebhookPanel.vue";
 import ProjectSettingPanel from "../components/ProjectSettingPanel.vue";
-import ProjectDeploymentConfigurationPanel from "../components/ProjectDeploymentConfigurationPanel.vue";
+import ProjectDeploymentConfigPanel from "../components/ProjectDeploymentConfigPanel.vue";
 import { cloneDeep } from "lodash-es";
 
 const OVERVIEW_TAB = 0;
@@ -65,7 +65,7 @@ const ACTIVITY_TAB = 2;
 const VERSION_CONTROL_TAB = 3;
 const PROJECT_HOOK_TAB = 4;
 const SETTING_TAB = 5;
-const DEPLOYMENT_CONFIGURATION_TAB = 6;
+const DEPLOYMENT_CONFIG_TAB = 6;
 
 export default defineComponent({
   name: "ProjectDetail",
@@ -76,7 +76,7 @@ export default defineComponent({
     ProjectVersionControlPanel,
     ProjectWebhookPanel,
     ProjectSettingPanel,
-    ProjectDeploymentConfigurationPanel,
+    ProjectDeploymentConfigPanel,
   },
   props: {
     projectSlug: {
@@ -125,7 +125,7 @@ export default defineComponent({
       VERSION_CONTROL_TAB,
       PROJECT_HOOK_TAB,
       SETTING_TAB,
-      DEPLOYMENT_CONFIGURATION_TAB,
+      DEPLOYMENT_CONFIG_TAB,
       project,
       databaseList,
     };

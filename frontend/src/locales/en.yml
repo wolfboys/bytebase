@@ -156,6 +156,7 @@ common:
   by: by
   ok: OK
   share: Share
+  others: Others
 error-page:
   go-back-home: Go back home
 anomaly-center: Anomaly Center
@@ -996,10 +997,22 @@ archive:
   instance-search-bar-placeholder: Search @.lower:{'common.instance'} name
   environment-search-bar-placeholder: Search @.lower:{'common.environment'} name
 deployment-config:
-  stage-n: Stage - {n}
+  stage-n: Stage {n}
   add-selector: Add selector
   update-success: Successfully updated deployment config.
   this-is-example-deployment-config: This is the deployment config example. You need to edit and save it.
+  n-databases: '{n} database | {n} databases'
+  selectors: Selectors
+  wont-be-deployed: Will no be deployed
+  add-stage: Add stage
+  name-placeholder: Stage name...
+  error:
+    at-least-one-stage: At least 1 stage
+    stage-name-required: Stage name is required
+    at-least-one-selector: At least 1 selector in each stage
+    env-in-selector-required: '"bb.environment In" is required in each stage'
+    key-required: Key is required
+    values-required: Values are required
 datasource:
   successfully-deleted-data-source-name: Successfully deleted data source '{0}'.
   create-data-source: Create data source
@@ -1041,6 +1054,7 @@ sql-editor:
   loading-databases: Loading Databases...
   close-pane: Close Pane
 label:
+  empty-label-value: <Empty Value>
   no-label: No labels
   error:
     key-necessary: Key is required

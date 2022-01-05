@@ -16,17 +16,42 @@
         :database-list="databaseList"
       />
       <div v-if="allowEdit" class="pt-4 flex justify-between items-center">
-        <button class="btn-normal" @click="addStage">Add Stage</button>
-        <button class="btn-primary" @click="update">
-          {{ $t("common.update") }}
+        <button class="btn-normal" @click="addStage">
+          {{ $t("deployment-config.add-stage") }}
         </button>
+        <NPopover :disabled="!state.error" trigger="hover">
+          <template #trigger>
+            <div
+              class="btn-primary"
+              :class="
+                state.error ? 'bg-accent opacity-50 cursor-not-allowed' : ''
+              "
+              @click="update"
+            >
+              {{ $t("common.update") }}
+            </div>
+          </template>
+
+          <span v-if="state.error" class="text-red-600">
+            {{ $t(state.error) }}
+          </span>
+        </NPopover>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType, ref, watchEffect } from "vue";
+import {
+  computed,
+  defineComponent,
+  nextTick,
+  PropType,
+  reactive,
+  ref,
+  watch,
+  watchEffect,
+} from "vue";
 import { useStore } from "vuex";
 import {
   Project,
@@ -39,15 +64,22 @@ import {
   EMPTY_ID,
   empty,
   DeploymentConfigPatch,
+  LabelSelectorRequirement,
 } from "../types";
 import DeploymentConfigTool from "./DeploymentConfigTool";
 import { cloneDeep } from "lodash-es";
 import { useI18n } from "vue-i18n";
-import { generateDefaultSchedule } from "../utils";
+import { NPopover } from "naive-ui";
+import { generateDefaultSchedule, validateDeploymentConfig } from "../utils";
+
+type LocalState = {
+  error: string | undefined;
+  ready: boolean;
+};
 
 export default defineComponent({
   name: "ProjectDeploymentConfigurationPanel",
-  components: { DeploymentConfigTool },
+  components: { DeploymentConfigTool, NPopover },
   props: {
     project: {
       required: true,
@@ -62,6 +94,11 @@ export default defineComponent({
     const store = useStore();
     const { t } = useI18n();
     const deployment = ref<DeploymentConfig>();
+
+    const state = reactive<LocalState>({
+      ready: false,
+      error: undefined,
+    });
 
     const prepareList = () => {
       store.dispatch("environment/fetchEnvironmentList");
@@ -121,22 +158,42 @@ export default defineComponent({
         //   dirty but not saved draft
         deployment.value = cloneDeep(dep);
       }
+      nextTick(() => {
+        // then we reset the local state
+        state.ready = true;
+        state.error = undefined;
+      });
     });
 
     const addStage = () => {
       if (!deployment.value) return;
+      const rule: LabelSelectorRequirement = {
+        key: "bb.environment",
+        operator: "In",
+        values: [],
+      };
+      if (environmentList.value.length > 0) {
+        rule.values.push(environmentList.value[0].name);
+      }
 
       deployment.value.schedule.deployments.push({
+        name: "New Stage",
         spec: {
           selector: {
-            matchExpressions: [],
+            matchExpressions: [rule],
           },
         },
       });
     };
 
+    const validate = () => {
+      if (!deployment.value) return;
+      state.error = validateDeploymentConfig(deployment.value);
+    };
+
     const update = () => {
       if (!deployment.value) return;
+      if (state.error) return;
 
       const deploymentConfigPatch: DeploymentConfigPatch = {
         payload: JSON.stringify(deployment.value.schedule),
@@ -152,8 +209,19 @@ export default defineComponent({
       });
     };
 
+    watch(
+      deployment,
+      (dep) => {
+        if (!dep) return;
+        if (!state.ready) return;
+        validate();
+      },
+      { deep: true }
+    );
+
     return {
       EMPTY_ID,
+      state,
       environmentList,
       labelList,
       databaseList,

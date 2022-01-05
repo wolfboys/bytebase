@@ -7,17 +7,13 @@
       :max="schedule.deployments.length"
       :deployment="deployment"
       :allow-edit="allowEdit"
+      :show-header="true"
       :database-list="databaseList"
       :label-list="labelList"
       @remove="removeStage(deployment)"
       @prev="reorder(i, -1)"
       @next="reorder(i, 1)"
     >
-      <template #header>
-        <h3 class="text-lg leading-6 font-medium text-main">
-          {{ $t("deployment-config.stage-n", { n: i + 1 }) }}
-        </h3>
-      </template>
     </DeploymentStage>
   </div>
 </template>
@@ -56,16 +52,6 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const addStage = () => {
-      props.schedule.deployments.push({
-        spec: {
-          selector: {
-            matchExpressions: [],
-          },
-        },
-      });
-    };
-
     const removeStage = (deployment: Deployment) => {
       const array = props.schedule.deployments;
       const index = array.indexOf(deployment);
@@ -86,7 +72,6 @@ export default defineComponent({
     };
 
     return {
-      addStage,
       removeStage,
       reorder,
     };
