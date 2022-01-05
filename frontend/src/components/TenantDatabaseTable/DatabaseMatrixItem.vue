@@ -16,9 +16,7 @@
           <span class="flex-1">{{ database.syncStatus }}</span>
         </div>
 
-        <div class="migration-version">&lt;&lt;fake version&gt;&gt;</div>
-
-        <div class="active issue">&lt;&lt;fake active issue&gt;&gt;</div>
+        <div>{{ $t("common.ver") }}: {{ database.schemaVersion }}</div>
       </div>
     </template>
 
@@ -69,9 +67,13 @@ export default defineComponent({
       type: Object as PropType<Database>,
       required: true,
     },
-    customClick: {
-      default: false,
+    clickable: {
       type: Boolean,
+      default: true,
+    },
+    customClick: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ["select-database"],
@@ -79,7 +81,9 @@ export default defineComponent({
     const router = useRouter();
 
     const clickDatabase = () => {
-      const { customClick, database } = props;
+      const { clickable, customClick, database } = props;
+      if (!clickable) return;
+
       if (customClick) {
         emit("select-database", database);
       } else {
@@ -92,7 +96,7 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
+<style scoped lang="postcss">
 .bb-database-matrix-item {
   @apply border-gray-300 border rounded px-2 py-0 divide-y cursor-pointer select-none hover:bg-gray-50;
 }

@@ -9,7 +9,9 @@
     :bottom-bordered="bordered"
     @click-row="clickDatabase"
   >
-    <template #body="{ rowData: database }">
+    <template
+      #body="{ rowData: database }: { rowData: (typeof databaseList)[number] }"
+    >
       <BBTableCell :left-padding="4" class="w-16">
         <div class="flex flex-row items-center space-x-1 tooltip-wrapper">
           <span>{{ database.name }}</span>
@@ -37,7 +39,7 @@
               stroke="currentColor"
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
-            />
+            ></svg>
             <template v-else-if="database.project.workflowType == 'VCS'">
               <span class="tooltip whitespace-nowrap">
                 {{ $t("database.version-control-enabled") }}
@@ -81,7 +83,7 @@ import { connectionSlug, databaseSlug } from "../utils";
 import { Database } from "../types";
 import { BBTableColumn } from "../bbkit/types";
 import InstanceEngineIcon from "./InstanceEngineIcon.vue";
-import { cloneDeep, isEmpty } from "lodash-es";
+import { cloneDeep } from "lodash-es";
 import { useI18n } from "vue-i18n";
 
 type Mode = "ALL" | "ALL_SHORT" | "INSTANCE" | "PROJECT" | "PROJECT_SHORT";
@@ -99,6 +101,10 @@ export default defineComponent({
       type: String as PropType<Mode>,
     },
     singleInstance: {
+      default: true,
+      type: Boolean,
+    },
+    rowClickable: {
       default: true,
       type: Boolean,
     },
@@ -258,6 +264,8 @@ export default defineComponent({
     };
 
     const clickDatabase = function (section: number, row: number) {
+      if (!props.rowClickable) return;
+
       const database = props.databaseList[row];
       if (props.customClick) {
         emit("select-database", database);

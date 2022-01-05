@@ -259,6 +259,7 @@ export const unknown = (
     collation: "",
     syncStatus: "NOT_FOUND",
     lastSuccessfulSyncTs: 0,
+    schemaVersion: "",
   };
 
   const UNKNOWN_DATA_SOURCE: DataSource = {
@@ -627,6 +628,7 @@ export const empty = (
     collation: "",
     syncStatus: "NOT_FOUND",
     lastSuccessfulSyncTs: 0,
+    schemaVersion: "",
   };
 
   const EMPTY_DATA_SOURCE: DataSource = {

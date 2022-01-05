@@ -1,7 +1,9 @@
 <template>
-  <div class="text-base font-medium">{{ name }}</div>
+  <slot v-if="showHeader" name="header">
+    <div class="text-base font-medium">{{ name }}</div>
+  </slot>
+
   <BBTable
-    :column-list="columnList"
     :data-source="filteredMatrices"
     :show-header="true"
     :custom-header="true"
@@ -12,44 +14,27 @@
     :row-clickable="false"
   >
     <template #header>
-      <BBTableHeaderCell
-        :title="columnList[0].title + 'asdf'"
-        compact
-        class="w-1/12 pl-3 pr-2"
-      >
-        <div
-          class="pl-1 py-1 rounded inline-flex items-center hover:bg-control-bg-hover cursor-pointer select-none"
-          @click="switchYAxisLabel"
-        >
-          <span>{{ yAxisLabel }}</span>
-          <heroicons-solid:selector class="h-4 w-4 text-control-light" />
-          <!-- <select
-            v-model="yAxisLabel"
-            class="absolute w-full h-full inset-0 opacity-0"
-          >
-            <option
-              v-for="label in selectableLabelList"
-              :key="label.key"
-              :value="label.key"
-            >
-              {{ label.key }}
-            </option>
-          </select> -->
-        </div>
-      </BBTableHeaderCell>
+      <tr>
+        <BBTableHeaderCell compact class="w-1/12 pl-3 pr-2">
+          <YAxisSwitch
+            v-if="yAxisLabel"
+            v-model:label="yAxisLabel"
+            :label-list="selectableLabelList"
+          />
+        </BBTableHeaderCell>
 
-      <BBTableHeaderCell
-        v-for="xValue in filteredXAxisValues"
-        :key="xValue"
-        :title="xValue"
-        :style="{
-          width: `${(100 - 1 / 12) / filteredXAxisValues.length - 1}%`,
-        }"
-        class="text-center"
-      >
-        <template v-if="xValue">{{ xValue }}</template>
-        <template v-else>{{ $t("database.empty-label-value") }}</template>
-      </BBTableHeaderCell>
+        <BBTableHeaderCell
+          v-for="xValue in filteredXAxisValues"
+          :key="xValue"
+          :style="{
+            width: `${(100 - 1 / 12) / filteredXAxisValues.length - 1}%`,
+          }"
+          class="text-center"
+        >
+          <template v-if="xValue">{{ xValue }}</template>
+          <template v-else>{{ $t("label.empty-label-value") }}</template>
+        </BBTableHeaderCell>
+      </tr>
     </template>
 
     <template #body="{ rowData: matrix }">
@@ -61,7 +46,7 @@
         }"
       >
         <template v-if="matrix.labelValue">{{ matrix.labelValue }}</template>
-        <template v-else>{{ $t("database.empty-label-value") }}</template>
+        <template v-else>{{ $t("label.empty-label-value") }}</template>
       </BBTableCell>
       <BBTableCell v-for="(dbList, i) in matrix.databaseMatrix" :key="i">
         <div class="flex flex-col items-center space-y-1">
@@ -77,7 +62,6 @@
       </BBTableCell>
     </template>
   </BBTable>
-  <!-- <h1>{{ databaseListGroupByName.map((g) => g.name) }}</h1> -->
 </template>
 
 <script lang="ts">
@@ -89,12 +73,10 @@ import {
   LabelKeyType,
   LabelValueType,
 } from "../../types";
-import { BBTableColumn } from "../../bbkit/types";
 import DatabaseMatrixItem from "./DatabaseMatrixItem.vue";
 import { groupBy } from "lodash-es";
-import { findDefaultGroupByLabel } from "../../utils";
-
-type Mode = "ALL" | "ALL_SHORT" | "INSTANCE" | "PROJECT" | "PROJECT_SHORT";
+import { findDefaultGroupByLabel, getLabelValue } from "../../utils";
+import YAxisSwitch1 from "./YAxisSwitch.vue";
 
 type DatabaseMatrix = {
   labelValue: LabelValueType;
@@ -103,15 +85,11 @@ type DatabaseMatrix = {
 
 export default defineComponent({
   name: "TenantDatabaseMatrix",
-  components: { DatabaseMatrixItem },
+  components: { DatabaseMatrixItem, YAxisSwitch: YAxisSwitch1 },
   props: {
     bordered: {
       default: true,
       type: Boolean,
-    },
-    mode: {
-      default: "ALL",
-      type: String as PropType<Mode>,
     },
     customClick: {
       default: false,
@@ -119,7 +97,11 @@ export default defineComponent({
     },
     name: {
       type: String,
-      required: true,
+      default: "",
+    },
+    showHeader: {
+      type: Boolean,
+      default: true,
     },
     databaseList: {
       type: Object as PropType<Database[]>,
@@ -259,30 +241,9 @@ export default defineComponent({
       }
     });
 
-    const columnList = computed((): BBTableColumn[] => [
-      { title: yAxisLabel.value || "" },
-      ...filteredXAxisValues.value.map((xValue) => ({ title: xValue })),
-    ]);
-
-    const switchYAxisLabel = () => {
-      const key = yAxisLabel.value;
-      if (!key) return;
-      const list = selectableLabelList.value;
-      if (list.length === 0) return;
-
-      const index = selectableLabelList.value.findIndex(
-        (label) => label.key === key
-      );
-      if (index < 0) return;
-      const next = (index + 1) % list.length;
-      yAxisLabel.value = list[next].key;
-    };
-
     return {
       selectableLabelList,
-      switchYAxisLabel,
       yAxisLabel,
-      columnList,
       yAxisValues,
       xAxisValues,
       filteredXAxisValues,
@@ -290,10 +251,4 @@ export default defineComponent({
     };
   },
 });
-
-const getLabelValue = (db: Database, key: LabelKeyType): LabelValueType => {
-  const label = db.labels.find((target) => target.key === key);
-  if (!label) return "";
-  return label.value;
-};
 </script>

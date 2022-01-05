@@ -2,6 +2,7 @@ import { countBy, groupBy, uniqBy } from "lodash-es";
 import {
   Database,
   DatabaseLabel,
+  DeploymentSchedule,
   Label,
   LabelKeyType,
   LabelSelector,
@@ -24,6 +25,15 @@ export const isReservedDatabaseLabel = (
   const label = labelList.find((label) => label.key === dbLabel.key);
   if (!label) return false;
   return label.id === RESERVED_LABEL_ID;
+};
+
+export const getLabelValue = (
+  db: Database,
+  key: LabelKeyType
+): LabelValueType => {
+  const label = db.labels.find((target) => target.key === key);
+  if (!label) return "";
+  return label.value;
 };
 
 export const groupingDatabaseListByLabelKey = (
@@ -89,6 +99,28 @@ export const filterDatabaseListByLabelSelector = (
   return databaseList.filter((db) =>
     isDatabaseMatchesSelector(db, labelSelector)
   );
+};
+
+export const getPipelineFromDeploymentSchedule = (
+  databaseList: Database[],
+  schedule: DeploymentSchedule
+): Database[][] => {
+  const stages: Database[][] = [];
+
+  const collectedIds = new Set<Database["id"]>();
+  schedule.deployments.forEach((deployment) => {
+    const dbs: Database[] = [];
+    databaseList.forEach((db) => {
+      if (collectedIds.has(db.id)) return;
+      if (isDatabaseMatchesSelector(db, deployment.spec.selector)) {
+        dbs.push(db);
+        collectedIds.add(db.id);
+      }
+    });
+    stages.push(dbs);
+  });
+
+  return stages;
 };
 
 export const isDatabaseMatchesSelector = (

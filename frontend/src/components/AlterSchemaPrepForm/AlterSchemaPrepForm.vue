@@ -1,34 +1,55 @@
 <template>
-  <div class="mx-4 space-y-4 w-160">
+  <div class="mx-4 space-y-4 max-w-min overflow-x-hidden">
     <VCSTipsInfo :project="state.project" />
 
-    <template v-if="projectId">
-      <template v-if="false && isTenantProject">
-        <!-- tenant mode project, disabled for now -->
-        <ProjectTenantView />
-      </template>
-      <template v-else>
-        <!-- standard mode project, single/multiple databases ui -->
-        <ProjectStandardView
-          :state="state"
-          :project="state.project"
-          :database-list="databaseList"
-          :environment-list="environmentList"
-          @select-database="selectDatabase"
-        />
-      </template>
-    </template>
-    <template v-else>
-      <!-- a simple table now -->
-      <DatabaseTable
-        mode="ALL_SHORT"
-        :bordered="true"
-        :custom-click="true"
-        :database-list="databaseList"
-        @select-database="selectDatabase"
-      />
-      <!-- but also another view for tenant mode databases later -->
-    </template>
+    <div class="overflow-x-auto">
+      <div :class="wrapperClass">
+        <template v-if="projectId">
+          <template v-if="isTenantProject">
+            <!-- tenant mode project -->
+            <ProjectTenantView
+              :state="state"
+              :database-list="databaseList"
+              :environment-list="environmentList"
+              :project="state.project"
+              @dismiss="cancel"
+            />
+          </template>
+          <template v-else>
+            <!-- standard mode project, single/multiple databases ui -->
+            <ProjectStandardView
+              :state="state"
+              :project="state.project"
+              :database-list="databaseList"
+              :environment-list="environmentList"
+              @select-database="selectDatabase"
+            />
+          </template>
+        </template>
+        <template v-else>
+          <NTabs v-model:value="state.tab" type="line">
+            <NTabPane :tab="$t('project.mode.standard')" name="standard">
+              <!-- a simple table -->
+              <DatabaseTable
+                mode="ALL_SHORT"
+                :bordered="true"
+                :custom-click="true"
+                :database-list="standardProjectDatabaseList"
+                @select-database="selectDatabase"
+              />
+            </NTabPane>
+            <NTabPane :tab="$t('project.mode.tenant')" name="tenant">
+              <CommonTenantView
+                :state="state"
+                :database-list="databaseList"
+                :environment-list="environmentList"
+                @dismiss="cancel"
+              />
+            </NTabPane>
+          </NTabs>
+        </template>
+      </div>
+    </div>
 
     <!-- Create button group -->
     <div class="pt-4 border-t border-block-border flex justify-end">
@@ -44,6 +65,15 @@
         class="btn-primary ml-3 inline-flex justify-center py-2 px-4"
         :disabled="!allowGenerateMultiDb"
         @click.prevent="generateMultDb"
+      >
+        {{ $t("common.next") }}
+      </button>
+
+      <button
+        v-if="isTenantProject"
+        class="btn-primary ml-3 inline-flex justify-center py-2 px-4"
+        :disabled="!allowGenerateTenant"
+        @click.prevent="generateTenant"
       >
         {{ $t("common.next") }}
       </button>
@@ -67,15 +97,24 @@ import {
 import { sortDatabaseList } from "../../utils";
 import { cloneDeep } from "lodash-es";
 import VCSTipsInfo from "./VCSTipsInfo.vue";
-import {
-  default as ProjectStandardView,
-  State as StandardModeState,
+import ProjectStandardView, {
+  State as ProjectStandardState,
 } from "./ProjectStandardView.vue";
+import ProjectTenantView, {
+  State as ProjectTenantState,
+} from "./ProjectTenantView.vue";
+import CommonTenantView, {
+  State as CommonTenantState,
+} from "./CommonTenantView.vue";
+import { NTabs, NTabPane } from "naive-ui";
 import { useEventListener } from "@vueuse/core";
 
-type LocalState = StandardModeState & {
+type LocalState = {
   project?: Project;
-};
+  tab: "standard" | "tenant";
+} & ProjectStandardState &
+  ProjectTenantState &
+  CommonTenantState;
 
 export default defineComponent({
   name: "AlterSchemaPrepForm",
@@ -83,6 +122,10 @@ export default defineComponent({
     VCSTipsInfo,
     DatabaseTable,
     ProjectStandardView,
+    ProjectTenantView,
+    CommonTenantView,
+    NTabs,
+    NTabPane,
   },
   props: {
     projectId: {
@@ -107,8 +150,10 @@ export default defineComponent({
       project: props.projectId
         ? store.getters["project/projectById"](props.projectId)
         : undefined,
+      tab: "standard",
       alterType: "SINGLE_DB",
       selectedDatabaseIdForEnvironment: new Map(),
+      selectedDatabaseName: undefined,
     });
 
     const isTenantProject = computed((): boolean => {
@@ -132,6 +177,18 @@ export default defineComponent({
       }
 
       return sortDatabaseList(cloneDeep(list), environmentList.value);
+    });
+
+    const standardProjectDatabaseList = computed(() => {
+      return databaseList.value.filter(
+        (db) => db.project.tenantMode !== "TENANT"
+      );
+    });
+
+    const tenantProjectDatabaseList = computed(() => {
+      return databaseList.value.filter(
+        (db) => db.project.tenantMode === "TENANT"
+      );
     });
 
     const allowGenerateMultiDb = computed(() => {
@@ -167,6 +224,12 @@ export default defineComponent({
       });
     };
 
+    const allowGenerateTenant = computed(() => !!state.selectedDatabaseName);
+
+    const generateTenant = () => {
+      console.log("TODO: tbd");
+    };
+
     const selectDatabase = (database: Database) => {
       emit("dismiss");
 
@@ -199,13 +262,28 @@ export default defineComponent({
       emit("dismiss");
     };
 
+    const wrapperClass = computed(() => {
+      if (props.projectId) {
+        if (isTenantProject.value) return "w-192";
+        else return "w-160";
+      } else {
+        if (state.tab === "standard") return "w-160";
+        return "w-192";
+      }
+    });
+
     return {
+      wrapperClass,
       state,
       isTenantProject,
       environmentList,
       databaseList,
+      standardProjectDatabaseList,
+      tenantProjectDatabaseList,
       allowGenerateMultiDb,
       generateMultDb,
+      allowGenerateTenant,
+      generateTenant,
       selectDatabase,
       cancel,
     };

@@ -19,7 +19,7 @@
       :options="values"
       :disabled="!editable"
       :multiple="true"
-      :placeholder="$t('database.label.placeholder.select-values')"
+      :placeholder="$t('label.placeholder.select-values')"
       class="select values"
     />
     <div v-if="editable" class="remove" @click="$emit('remove')">

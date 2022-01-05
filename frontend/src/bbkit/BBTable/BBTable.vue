@@ -4,22 +4,20 @@
     :class="borderVisibility"
   >
     <thead v-if="showHeader && !sectionDataSource" class="bg-gray-50">
-      <tr>
+      <template v-if="customHeader">
         <!-- different implements for legacy compatibility -->
-        <template v-if="customHeader">
-          <slot name="header" />
-        </template>
-        <template v-else>
-          <th
-            v-for="(column, index) in columnList"
-            :key="index"
-            scope="col"
-            class="py-2 text-left text-xs font-medium text-gray-500 tracking-wider"
-            :class="index == 0 ? 'pl-4' : 'pl-2'"
-          >
-            {{ column.title }}
-          </th>
-        </template>
+        <slot name="header" />
+      </template>
+      <tr v-else>
+        <th
+          v-for="(column, index) in columnList"
+          :key="index"
+          scope="col"
+          class="py-2 text-left text-xs font-medium text-gray-500 tracking-wider"
+          :class="index == 0 ? 'pl-4' : 'pl-2'"
+        >
+          {{ column.title }}
+        </th>
       </tr>
     </thead>
 
@@ -101,8 +99,8 @@ export default defineComponent({
   components: {},
   props: {
     columnList: {
-      required: true,
-      type: Object as PropType<BBTableColumn[]>,
+      type: Array as PropType<BBTableColumn[]>,
+      default: () => [],
     },
     dataSource: {
       default: () => [],

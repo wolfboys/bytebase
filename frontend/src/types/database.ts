@@ -37,6 +37,7 @@ export type Database = {
   name: string;
   characterSet: string;
   collation: string;
+  schemaVersion: string;
   labels: DatabaseLabel[];
 };
 

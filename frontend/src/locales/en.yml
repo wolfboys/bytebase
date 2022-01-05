@@ -125,6 +125,7 @@ common:
   coming-later: Coming later
   learn-more: Learn more
   schema-version: Schema version
+  ver: Ver
   time: Time
   manual: Manual
   automatic: Automatic

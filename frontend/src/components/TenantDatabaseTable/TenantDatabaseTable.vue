@@ -1,12 +1,14 @@
 <template>
-  <DatabaseMatrix
-    v-for="dbGroup in databaseListGroupByName"
-    :key="dbGroup.name"
-    :name="dbGroup.name"
-    :database-list="dbGroup.databaseList"
-    :environment-list="environmentList"
-    :label-list="labelList"
-  />
+  <div class="flex flex-col space-y-4">
+    <DatabaseMatrix
+      v-for="dbGroup in databaseListGroupByName"
+      :key="dbGroup.name"
+      :name="dbGroup.name"
+      :database-list="dbGroup.databaseList"
+      :environment-list="environmentList"
+      :label-list="labelList"
+    />
+  </div>
 </template>
 
 <script lang="ts">
