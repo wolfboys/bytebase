@@ -70,7 +70,7 @@
       </button>
 
       <button
-        v-if="isTenantProject"
+        v-if="isTenantProject || (!projectId && state.tab === 'tenant')"
         class="btn-primary ml-3 inline-flex justify-center py-2 px-4"
         :disabled="!allowGenerateTenant"
         @click.prevent="generateTenant"
@@ -93,6 +93,7 @@ import {
   Project,
   ProjectId,
   Repository,
+  UNKNOWN_ID,
 } from "../../types";
 import { sortDatabaseList } from "../../utils";
 import { cloneDeep } from "lodash-es";
@@ -109,12 +110,12 @@ import CommonTenantView, {
 import { NTabs, NTabPane } from "naive-ui";
 import { useEventListener } from "@vueuse/core";
 
-type LocalState = {
-  project?: Project;
-  tab: "standard" | "tenant";
-} & ProjectStandardState &
+type LocalState = ProjectStandardState &
   ProjectTenantState &
-  CommonTenantState;
+  CommonTenantState & {
+    project?: Project;
+    tab: "standard" | "tenant";
+  };
 
 export default defineComponent({
   name: "AlterSchemaPrepForm",
@@ -153,6 +154,7 @@ export default defineComponent({
       tab: "standard",
       alterType: "SINGLE_DB",
       selectedDatabaseIdForEnvironment: new Map(),
+      tenantProjectId: undefined,
       selectedDatabaseName: undefined,
     });
 
@@ -227,7 +229,36 @@ export default defineComponent({
     const allowGenerateTenant = computed(() => !!state.selectedDatabaseName);
 
     const generateTenant = () => {
-      console.log("TODO: tbd");
+      emit("dismiss");
+
+      const projectId = props.projectId || state.tenantProjectId;
+      if (!projectId) return;
+
+      const project = store.getters["project/projectById"](
+        projectId
+      ) as Project;
+
+      if (project.id === UNKNOWN_ID) return;
+
+      if (project.workflowType === "UI") {
+        router.push({
+          name: "workspace.issue.detail",
+          params: {
+            issueSlug: "new",
+          },
+          query: {
+            template: "bb.issue.database.schema.update",
+            name: `[${state.selectedDatabaseName}] Alter schema`,
+            project: project.id,
+          },
+        });
+      } else if (project.workflowType === "VCS") {
+        store
+          .dispatch("repository/fetchRepositoryByProjectId", project.id)
+          .then((repository: Repository) => {
+            window.open(baseDirectoryWebUrl(repository), "_blank");
+          });
+      }
     };
 
     const selectDatabase = (database: Database) => {
@@ -263,6 +294,7 @@ export default defineComponent({
     };
 
     const wrapperClass = computed(() => {
+      // provide a wider modal to tenant view
       if (props.projectId) {
         if (isTenantProject.value) return "w-192";
         else return "w-160";

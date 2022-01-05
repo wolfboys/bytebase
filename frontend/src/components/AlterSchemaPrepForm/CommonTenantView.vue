@@ -1,4 +1,6 @@
 <template>
+  <!-- eslint-disable vue/no-mutating-props -->
+
   <div class="flex items-center py-1">
     <label for="project" class="textlabel mr-4">
       {{ $t("common.projects") }}
@@ -9,12 +11,12 @@
         class="mt-1"
         name="project"
         :mode="ProjectMode.Tenant"
-        :selected-id="local.projectId"
-        @select-project-id="(id: number) => local.projectId = id"
+        :selected-id="props.state.tenantProjectId"
+        @select-project-id="(id: number) => props.state.tenantProjectId = id"
       />
     </div>
   </div>
-  <div v-if="local.projectId">
+  <div v-if="state.tenantProjectId">
     <ProjectTenantView
       :state="state"
       :database-list="filteredDatabaseList"
@@ -26,7 +28,7 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps, defineEmits, reactive, computed } from "vue";
+import { defineProps, defineEmits, computed } from "vue";
 import { useStore } from "vuex";
 import { Database, Environment, Project, ProjectId } from "../../types";
 import ProjectSelect, { Mode as ProjectMode } from "../ProjectSelect.vue";
@@ -34,13 +36,14 @@ import ProjectTenantView, {
   State as ProjectTenantState,
 } from "./ProjectTenantView.vue";
 
-export type State = ProjectTenantState;
+export type State = ProjectTenantState & {
+  tenantProjectId: ProjectId | undefined;
+};
 
 const props = defineProps<{
   state: State;
   databaseList: Database[];
   environmentList: Environment[];
-  project?: Project;
 }>();
 
 defineEmits<{
@@ -49,16 +52,16 @@ defineEmits<{
 
 const store = useStore();
 
-const local = reactive({
-  projectId: undefined as ProjectId | undefined,
-});
-
 const project = computed(() => {
-  return store.getters["project/projectById"](local.projectId) as Project;
+  return store.getters["project/projectById"](
+    props.state.tenantProjectId
+  ) as Project;
 });
 
 const filteredDatabaseList = computed(() => {
-  if (!local.projectId) return [];
-  return props.databaseList.filter((db) => db.project.id === local.projectId);
+  if (!props.state.tenantProjectId) return [];
+  return props.databaseList.filter(
+    (db) => db.project.id === props.state.tenantProjectId
+  );
 });
 </script>
