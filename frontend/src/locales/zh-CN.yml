@@ -97,6 +97,7 @@ common:
   unassigned: 未指派
   new: 创建
   add: 添加
+  confirm-and-add: 确认并添加
   query: 查询
   transfer: 转移
   migration: 迁移
@@ -925,6 +926,8 @@ sql-editor:
   search-databases: 搜索数据库
   loading-databases: 加载数据库信息...
   close-pane: 关闭面板
+  loading-data: 加载数据中...
+  table-empty-placehoder: 点击 ”运行“ 执行查询
 label:
   empty-label-value: <空值>
   no-label: 没有标签

@@ -97,6 +97,7 @@ common:
   unassigned: Unassigned
   new: New
   add: Add
+  confirm-and-add: Confirm and add
   query: Query
   transfer: Transfer
   migration: Migration
@@ -1054,6 +1055,8 @@ sql-editor:
   search-databases: Search Databases
   loading-databases: Loading Databases...
   close-pane: Close Pane
+  loading-data: Loading Data...
+  table-empty-placehoder: Click Run to execute the query.
 label:
   empty-label-value: <Empty Value>
   no-label: No labels

@@ -35,8 +35,10 @@ import { VCS } from "./vcs";
 import { Label } from "./label";
 import { DeploymentConfig } from "./deployment";
 import { ConnectionAtom, ConnectionContext } from "./sqlEditor";
+import { TabInfo, AnyTabInfo } from "./editorSelector";
 import instanceStore from "../store/modules/instance";
 import sqlEditorStore from "../store/modules/sqlEditor";
+import editorSelectorStore from "../store/modules/editorSelector";
 
 export interface ActuatorState {
   serverInfo?: ServerInfo;
@@ -192,3 +194,12 @@ export interface SqlEditorState {
 export type SqlEditorGetters = typeof sqlEditorStore.getters;
 export type SqlEditorActions = typeof sqlEditorStore.actions;
 export type SqlEditorMutations = typeof sqlEditorStore.mutations;
+
+export interface EditorSelectorState {
+  queryTabList: TabInfo[];
+  activeTab: TabInfo;
+  activeTabIdx: number;
+}
+export type EditorSelectorGetters = typeof editorSelectorStore.getters;
+export type EditorSelectorActions = typeof editorSelectorStore.actions;
+export type EditorSelectorMutations = typeof editorSelectorStore.mutations;
