@@ -95,6 +95,7 @@
             </label>
             <DatabaseLabelsEditor
               :labels="database.labels"
+              :allow-edit="allowAdmin"
               @save="updateLabels"
             />
           </div>

@@ -1,13 +1,19 @@
 <template>
   <div class="database-labels-editor flex items-center">
-    <DatabaseLabels :labels="state.labels" :editable="state.mode === 'EDIT'" />
+    <DatabaseLabels
+      :labels="state.labels"
+      :editable="allowEdit && state.mode === 'EDIT'"
+    />
     <div
       v-if="state.mode === 'VIEW' && state.labels.length === 0"
       class="text-sm text-control-placeholder"
     >
       {{ $t("label.no-label") }}
     </div>
-    <div class="buttons flex items-center gap-1 ml-1 text-control">
+    <div
+      v-if="allowEdit"
+      class="buttons flex items-center gap-1 ml-1 text-control"
+    >
       <template v-if="state.mode === 'VIEW'">
         <button class="icon-btn lite" @click="state.mode = 'EDIT'">
           <heroicons-outline:pencil class="w-4 h-4" />
@@ -59,6 +65,10 @@ export default defineComponent({
     labels: {
       type: Array as PropType<DatabaseLabel[]>,
       default: () => [],
+    },
+    allowEdit: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ["save"],
