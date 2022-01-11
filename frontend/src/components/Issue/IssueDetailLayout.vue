@@ -97,11 +97,11 @@
           >
             <IssueSidebar
               :issue="issue"
-              :task="selectedTask"
               :database="database"
               :instance="instance"
               :create="create"
               :selected-stage="selectedStage"
+              :task="selectedTask"
               :input-field-list="issueTemplate.inputFieldList"
               :allow-edit="allowEditSidebar"
               @update-assignee-id="updateAssigneeId"
@@ -399,6 +399,8 @@ export default defineComponent({
             (detail) => (detail.statement = newStatement)
           );
         } else {
+          // otherwise apply it to the only one task in stage
+          // i.e. selectedStage.taskList[0]
           const stage = selectedStage.value as StageCreate;
           stage.taskList[0].statement = newStatement;
         }
@@ -985,14 +987,13 @@ export default defineComponent({
 
     const database = computed((): Database | undefined => {
       if (props.create) {
-        const databaseId = (selectedStage.value.taskList[0] as TaskCreate)
-          .databaseId;
+        const databaseId = (selectedTask.value as TaskCreate).databaseId;
         if (databaseId) {
           return store.getters["database/databaseById"](databaseId);
         }
         return undefined;
       }
-      return (selectedStage.value.taskList[0] as Task).database;
+      return (selectedTask.value as Task).database;
     });
 
     const instance = computed((): Instance => {
@@ -1002,10 +1003,10 @@ export default defineComponent({
           return database.value.instance;
         }
         return store.getters["instance/instanceById"](
-          (selectedStage.value.taskList[0] as TaskCreate).instanceId
+          (selectedTask.value as TaskCreate).instanceId
         );
       }
-      return (selectedStage.value.taskList[0] as Task).instance;
+      return (selectedTask.value as Task).instance;
     });
 
     const sqlHint = (isRollBack: boolean): string | undefined => {
