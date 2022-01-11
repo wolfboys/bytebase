@@ -107,7 +107,7 @@ import { useStore } from "vuex";
 import ActivityTable from "../components/ActivityTable.vue";
 import DatabaseTable from "../components/DatabaseTable.vue";
 import TenantDatabaseTable from "./TenantDatabaseTable";
-import IssueTable from "../components/IssueTable.vue";
+import { IssueTable } from "../components/Issue";
 import {
   Activity,
   Database,

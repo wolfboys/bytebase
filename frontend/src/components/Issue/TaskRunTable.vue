@@ -71,10 +71,10 @@
 
 <script lang="ts">
 import { computed, defineComponent, PropType } from "vue";
-import PrincipalAvatar from "./PrincipalAvatar.vue";
-import { BBTableColumn } from "../bbkit/types";
-import { MigrationErrorCode, Task, TaskRun, TaskRunStatus } from "../types";
-import { databaseSlug, instanceSlug, migrationHistorySlug } from "../utils";
+import PrincipalAvatar from "../PrincipalAvatar.vue";
+import { BBTableColumn } from "../../bbkit/types";
+import { MigrationErrorCode, Task, TaskRun, TaskRunStatus } from "../../types";
+import { databaseSlug, instanceSlug, migrationHistorySlug } from "../../utils";
 import { useI18n } from "vue-i18n";
 
 type CommentLink = {
@@ -155,9 +155,10 @@ export default defineComponent({
             link: `/instance/${instanceSlug(props.task.instance)}`,
           };
         } else if (
-          taskRun.code == MigrationErrorCode.MIGRAITON_ALREADY_APPLIED ||
-          taskRun.code == MigrationErrorCode.MGIRATION_OUT_OF_ORDER ||
-          taskRun.code == MigrationErrorCode.MIGRATION_BASELINE_MISSING
+          props.task.database &&
+          (taskRun.code == MigrationErrorCode.MIGRAITON_ALREADY_APPLIED ||
+            taskRun.code == MigrationErrorCode.MGIRATION_OUT_OF_ORDER ||
+            taskRun.code == MigrationErrorCode.MIGRATION_BASELINE_MISSING)
         ) {
           return {
             title: t("task.view-migration-history"),

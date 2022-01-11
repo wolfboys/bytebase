@@ -59,6 +59,9 @@ export const validateDeploymentSpec = (
   if (!envRule || envRule.operator !== "In") {
     return "deployment-config.error.env-in-selector-required";
   }
+  if (envRule.values.length !== 1) {
+    return "deployment-config.error.env-selector-must-has-one-value";
+  }
 
   for (let i = 0; i < rules.length; i++) {
     const rule = rules[i];

@@ -90,6 +90,9 @@ import {
   baseDirectoryWebUrl,
   Database,
   DatabaseId,
+  Issue,
+  IssueCreate,
+  Principal,
   Project,
   ProjectId,
   Repository,
@@ -139,7 +142,9 @@ export default defineComponent({
     const store = useStore();
     const router = useRouter();
 
-    const currentUser = computed(() => store.getters["auth/currentUser"]());
+    const currentUser = computed(
+      () => store.getters["auth/currentUser"]() as Principal
+    );
 
     useEventListener(window, "keydown", (e) => {
       if (e.code === "Escape") {
@@ -228,7 +233,7 @@ export default defineComponent({
 
     const allowGenerateTenant = computed(() => !!state.selectedDatabaseName);
 
-    const generateTenant = () => {
+    const generateTenant = async () => {
       emit("dismiss");
 
       const projectId = props.projectId || state.tenantProjectId;
@@ -250,6 +255,7 @@ export default defineComponent({
             template: "bb.issue.database.schema.update",
             name: `[${state.selectedDatabaseName}] Alter schema`,
             project: project.id,
+            databaseName: state.selectedDatabaseName,
           },
         });
       } else if (project.workflowType === "VCS") {

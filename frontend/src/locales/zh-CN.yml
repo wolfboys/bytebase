@@ -93,6 +93,7 @@ common:
   snapshot: 快照
   status: 状态
   stage: 阶段
+  task: 任务
   sql: SQL
   unassigned: 未指派
   new: 创建
@@ -195,6 +196,13 @@ task:
   view-migration: 查看迁移
   view-migration-history: 查看迁移历史
   earliest-allowed-time-unset: 未设置
+  status:
+    running: 运行中
+    failed: 失败
+    canceled: 取消
+    success: 成功
+    warn: 警告
+    error: 错误
 banner:
   demo-intro: 这是 Bytebase 的演示版本。
   demo-intro-readonly: 这是 Bytebase 的只读演示版本
@@ -883,7 +891,8 @@ deployment-config:
     at-least-one-stage: 至少需要 1 个阶段
     stage-name-required: 需要指定阶段名称
     at-least-one-selector: 每个阶段至少需要 1 个选择条件
-    env-in-selector-required: '每个阶段都需要有 "bb.environment In" 选择条件'
+    env-in-selector-required: 每个阶段都需要有 "bb.environment In" 选择条件
+    env-selector-must-has-one-value: '"bb.environment In" 必须有且只有 1 个值'
     key-required: 需要指定 Key
     values-required: 需要指定值
 datasource:

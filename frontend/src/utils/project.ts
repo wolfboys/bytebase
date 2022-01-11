@@ -6,9 +6,9 @@ export function projectName(project: Project) {
   if (project.rowStatus == "ARCHIVED") {
     postfix.push("Archived");
   }
-  if (project.tenantMode === "TENANT") {
-    postfix.push("Tenant");
-  }
+  // if (project.tenantMode === "TENANT") {
+  //   postfix.push("Tenant");
+  // }
 
   if (postfix.length > 0) {
     name += ` (${postfix.join(", ")})`;

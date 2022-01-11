@@ -28,7 +28,7 @@
           :selectedId="create ? issue.assigneeId : issue.assignee?.id"
           :allowed-role-list="['OWNER', 'DBA']"
           @select-principal-id="
-            (principalId) => {
+            (principalId: number) => {
               $emit('update-assignee-id', principalId);
             }
           "
@@ -48,7 +48,7 @@
               :required="true"
               :value="fieldValue(field)"
               :placeholder="field.placeholder"
-              @end-editing="(text) => trySaveCustomField(field, text)"
+              @end-editing="(text: string) => trySaveCustomField(field, text)"
             />
           </template>
           <template v-else-if="field.type == 'Boolean'">
@@ -56,7 +56,7 @@
               :disabled="!allowEditCustomField(field)"
               :value="fieldValue(field)"
               @toggle="
-                (on) => {
+                (on: boolean) => {
                   trySaveCustomField(field, on);
                 }
               "
@@ -75,8 +75,22 @@
         <div class="col-span-2">
           <StageSelect
             :pipeline="issue.pipeline"
-            :selected-i-d="selectedStage.id"
+            :selected-id="selectedStage.id"
             @select-stage-id="(stageId) => $emit('select-stage-id', stageId)"
+          />
+        </div>
+      </template>
+
+      <template v-if="showTaskSelect">
+        <h2 class="textlabel flex items-center col-span-1 col-start-1">
+          {{ $t("common.task") }}
+        </h2>
+        <div class="col-span-2">
+          <TaskSelect
+            :pipeline="issue.pipeline"
+            :stage="selectedStage"
+            :selected-id="task.id"
+            @select-task-id="(taskId) => $emit('select-task-id', taskId)"
           />
         </div>
       </template>
@@ -162,6 +176,21 @@
       >
         {{ environmentName(environment) }}
       </router-link>
+
+      <template v-if="isTenantProject && database">
+        <h2 class="textlabel flex items-start col-span-1 col-start-1">
+          {{ $t("common.labels") }}
+        </h2>
+        <div class="col-span-2">
+          <div>
+            <DatabaseLabels
+              :editable="false"
+              :labels="database.labels"
+              class="flex-col items-start"
+            />
+          </div>
+        </div>
+      </template>
     </div>
     <div
       class="mt-6 border-t border-block-border pt-6 grid gap-y-6 gap-x-6 grid-cols-3"
@@ -226,14 +255,16 @@ import { computed, defineComponent, PropType, reactive, watch } from "vue";
 import { useStore } from "vuex";
 import isEqual from "lodash-es/isEqual";
 import { NDatePicker } from "naive-ui";
-import PrincipalAvatar from "../components/PrincipalAvatar.vue";
-import MemberSelect from "../components/MemberSelect.vue";
-import StageSelect from "../components/StageSelect.vue";
-import IssueStatusIcon from "../components/IssueStatusIcon.vue";
-import IssueSubscriberPanel from "../components/IssueSubscriberPanel.vue";
-import InstanceEngineIcon from "../components/InstanceEngineIcon.vue";
+import PrincipalAvatar from "../PrincipalAvatar.vue";
+import MemberSelect from "../MemberSelect.vue";
+import StageSelect from "./StageSelect.vue";
+import TaskSelect from "./TaskSelect.vue";
+import IssueStatusIcon from "./IssueStatusIcon.vue";
+import IssueSubscriberPanel from "./IssueSubscriberPanel.vue";
+import InstanceEngineIcon from "../InstanceEngineIcon.vue";
+import { DatabaseLabels } from "../DatabaseLabels";
 
-import { InputField } from "../plugins";
+import { InputField } from "../../plugins";
 import {
   Database,
   Environment,
@@ -248,8 +279,8 @@ import {
   Instance,
   ONBOARDING_ISSUE_ID,
   TaskDatabaseCreatePayload,
-} from "../types";
-import { allTaskList, databaseSlug, isDBAOrOwner } from "../utils";
+} from "../../types";
+import { allTaskList, databaseSlug, isDBAOrOwner } from "../../utils";
 import { useRouter } from "vue-router";
 import moment from "moment";
 
@@ -265,6 +296,8 @@ export default defineComponent({
     PrincipalAvatar,
     MemberSelect,
     StageSelect,
+    TaskSelect,
+    DatabaseLabels,
     IssueStatusIcon,
     IssueSubscriberPanel,
     InstanceEngineIcon,
@@ -310,6 +343,7 @@ export default defineComponent({
     "remove-subscriber-id",
     "update-custom-field",
     "select-stage-id",
+    "select-task-id",
   ],
   setup(props, { emit }) {
     const store = useStore();
@@ -378,10 +412,20 @@ export default defineComponent({
       return (props.issue as Issue).project;
     });
 
+    const isTenantProject = computed((): boolean => {
+      return project.value.tenantMode === "TENANT";
+    });
+
     const showStageSelect = computed((): boolean => {
       return (
         !props.create && allTaskList((props.issue as Issue).pipeline).length > 1
       );
+    });
+
+    const showTaskSelect = computed((): boolean => {
+      if (props.create) return false;
+      const { taskList } = props.selectedStage;
+      return taskList.length > 1;
     });
 
     const showInstance = computed((): boolean => {
@@ -483,8 +527,10 @@ export default defineComponent({
       environment,
       databaseName,
       project,
+      isTenantProject,
       showInstance,
       showStageSelect,
+      showTaskSelect,
       allowEditAssignee,
       allowEditEarliestAllowedTime,
       allowEditCustomField,

@@ -93,6 +93,7 @@ common:
   snapshot: Snapshot
   status: Status
   stage: Stage
+  task: Task
   sql: SQL
   unassigned: Unassigned
   new: New
@@ -198,6 +199,13 @@ task:
   ended: Ended
   view-migration: View migration
   view-migration-history: View migration history
+  status:
+    running: Running
+    failed: Failed
+    canceled: Canceled
+    success: Success
+    warn: Warning
+    error: Error
 banner:
   demo-intro: This is a demo version of Bytebase.
   demo-intro-readonly: This is a demo version of Bytebase in read-only mode.
@@ -1013,6 +1021,7 @@ deployment-config:
     stage-name-required: Stage name is required
     at-least-one-selector: At least 1 selector in each stage
     env-in-selector-required: '"bb.environment In" is required in each stage'
+    env-selector-must-has-one-value: '"bb.environment In" must has exactly one value'
     key-required: Key is required
     values-required: Values are required
 datasource:

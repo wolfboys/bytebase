@@ -16,7 +16,7 @@
           <span class="flex-1">{{ database.syncStatus }}</span>
         </div>
 
-        <div>{{ $t("common.ver") }}: {{ database.schemaVersion }}</div>
+        <div>{{ $t("common.version") }}: {{ database.schemaVersion }}</div>
       </div>
     </template>
 

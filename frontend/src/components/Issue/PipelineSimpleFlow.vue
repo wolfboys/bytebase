@@ -109,7 +109,7 @@
 </template>
 
 <script lang="ts">
-import { computed, PropType } from "vue";
+import { computed, defineComponent, PropType } from "vue";
 import {
   Pipeline,
   TaskStatus,
@@ -120,9 +120,9 @@ import {
   PipelineCreate,
   Task,
   TaskCreate,
-} from "../types";
-import { activeTask, activeTaskInStage } from "../utils";
-import isEmpty from "lodash-es/isEmpty";
+} from "../../types";
+import { activeTask, activeTaskInStage } from "../../utils";
+import { isEmpty } from "lodash-es";
 
 interface FlowItem {
   stageId: StageId;
@@ -133,7 +133,7 @@ interface FlowItem {
   valid: boolean;
 }
 
-export default {
+export default defineComponent({
   name: "PipelineSimpleFlow",
   props: {
     create: {
@@ -266,5 +266,5 @@ export default {
       clickItem,
     };
   },
-};
+});
 </script>

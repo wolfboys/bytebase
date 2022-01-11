@@ -1,209 +1,12 @@
 <template>
-  <div
-    id="issue-detail-top"
-    class="flex-1 overflow-auto focus:outline-none"
-    tabindex="0"
-  >
-    <div
-      v-if="showCancelBanner"
-      class="h-8 w-full text-base font-medium bg-gray-400 text-white flex justify-center items-center"
-    >
-      {{ $t("common.canceled") }}
-    </div>
-    <div
-      v-else-if="showSuccessBanner"
-      class="h-8 w-full text-base font-medium bg-success text-white flex justify-center items-center"
-    >
-      {{ $t("common.done") }}
-    </div>
-    <div
-      v-else-if="showPendingApproval"
-      class="h-8 w-full text-base font-medium bg-accent text-white flex justify-center items-center"
-    >
-      {{ $t("issue.waiting-approval") }}
-    </div>
-    <!-- Highlight Panel -->
-    <div class="bg-white px-4 pb-4">
-      <IssueHighlightPanel
-        :issue="issue"
-        :create="state.create"
-        :allow-edit="allowEditNameAndDescription"
-        @update-name="updateName"
-      >
-        <IssueStatusTransitionButtonGroup
-          :create="state.create"
-          :allow-rollback="allowRollback"
-          :issue="issue"
-          :issue-template="issueTemplate"
-          @create="doCreate"
-          @rollback="doRollback"
-          @change-issue-status="changeIssueStatus"
-          @change-task-status="changeTaskStatus"
-        />
-      </IssueHighlightPanel>
-    </div>
-
-    <!-- Stage Flow Bar -->
-    <template v-if="showPipelineFlowBar">
-      <PipelineSimpleFlow
-        :create="state.create"
-        :pipeline="issue.pipeline"
-        :selected-stage="selectedStage"
-        @select-stage-id="selectStageId"
-      />
-      <div v-if="!state.create" class="px-4 py-4 md:flex md:flex-col border-b">
-        <IssueStagePanel :stage="selectedStage" />
-      </div>
-    </template>
-
-    <!-- Output Panel -->
-    <!-- Only render the top border if PipelineFlowBar is not displayed, otherwise it would overlap with the bottom border of that -->
-    <div
-      v-if="showIssueOutputPanel"
-      class="px-2 py-4 md:flex md:flex-col"
-      :class="showPipelineFlowBar ? '' : 'lg:border-t'"
-    >
-      <IssueOutputPanel
-        :issue="issue"
-        :output-field-list="issueTemplate.outputFieldList"
-        :allow-edit="allowEditOutput"
-        @update-custom-field="updateCustomField"
-      />
-    </div>
-
-    <!-- Main Content -->
-    <main
-      class="flex-1 relative overflow-y-auto focus:outline-none"
-      :class="
-        showPipelineFlowBar && !showIssueOutputPanel
-          ? ''
-          : 'lg:border-t lg:border-block-border'
-      "
-      tabindex="-1"
-    >
-      <div class="flex max-w-3xl mx-auto px-6 lg:max-w-full">
-        <div class="flex flex-col flex-1 lg:flex-row-reverse lg:col-span-2">
-          <div
-            class="py-6 lg:pl-4 lg:w-96 xl:w-112 lg:border-l lg:border-block-border"
-          >
-            <IssueSidebar
-              :issue="issue"
-              :task="selectedTask"
-              :database="database"
-              :instance="instance"
-              :create="state.create"
-              :selected-stage="selectedStage"
-              :input-field-list="issueTemplate.inputFieldList"
-              :allow-edit="allowEditSidebar"
-              @update-assignee-id="updateAssigneeId"
-              @update-earliest-allowed-time="updateEarliestAllowedTime"
-              @add-subscriber-id="addSubscriberId"
-              @remove-subscriber-id="removeSubscriberId"
-              @update-custom-field="updateCustomField"
-              @select-stage-id="selectStageId"
-            />
-          </div>
-          <div class="lg:hidden border-t border-block-border" />
-          <div class="w-full py-4 pr-4">
-            <section v-if="showIssueTaskStatementPanel" class="border-b mb-4">
-              <div v-if="!state.create" class="mb-4">
-                <TaskCheckBar
-                  :task="selectedTask"
-                  @run-checks="runTaskChecks"
-                />
-              </div>
-              <!-- The way this is written is awkward and is to workaround an issue in IssueTaskStatementPanel.
-                   The statement panel is in non-edit mode when not creating the issue, and we use v-highlight
-                   to apply syntax highlighting when the panel is in non-edit mode. However, the v-highlight
-                   doesn't seem to work well with the reactivity. So for non-edit mode when !state.create, we
-                   list every IssueTaskStatementPanel for each stage and use v-if to show the active one. -->
-              <template v-if="state.create">
-                <IssueTaskStatementPanel
-                  :sql-hint="sqlHint(false)"
-                  :statement="selectedStatement"
-                  :create="state.create"
-                  :allow-edit="true"
-                  :rollback="false"
-                  :show-apply-statement="showIssueTaskStatementApply"
-                  @update-statement="updateStatement"
-                  @apply-statement-to-other-stages="applyStatementToOtherStages"
-                />
-              </template>
-              <template
-                v-for="(stage, index) in issue.pipeline.stageList"
-                v-else
-                :key="index"
-              >
-                <template v-if="selectedStage.id == stage.id">
-                  <IssueTaskStatementPanel
-                    :sql-hint="sqlHint(false)"
-                    :statement="statement(stage)"
-                    :create="state.create"
-                    :allow-edit="allowEditStatement"
-                    :rollback="false"
-                    :show-apply-statement="showIssueTaskStatementApply"
-                    @update-statement="updateStatement"
-                  />
-                </template>
-              </template>
-            </section>
-            <section
-              v-if="showIssueTaskRollbackStatementPanel"
-              class="border-b mb-4"
-            >
-              <template v-if="state.create">
-                <IssueTaskStatementPanel
-                  :sql-hint="sqlHint(true)"
-                  :statement="selectedRollbackStatement"
-                  :create="state.create"
-                  :allow-edit="false"
-                  :rollback="true"
-                  :show-apply-statement="showIssueTaskStatementApply"
-                  @update-statement="updateRollbackStatement"
-                  @apply-statement-to-other-stages="
-                    applyRollbackStatementToOtherStages
-                  "
-                />
-              </template>
-              <template
-                v-for="(stage, index) in issue.pipeline.stageList"
-                v-else
-                :key="index"
-              >
-                <template v-if="selectedStage.id == stage.id">
-                  <IssueTaskStatementPanel
-                    :sql-hint="sqlHint(true)"
-                    :statement="rollbackStatement(stage)"
-                    :create="state.create"
-                    :allow-edit="false"
-                    :rollback="true"
-                    :show-apply-statement="showIssueTaskStatementApply"
-                    @update-statement="updateRollbackStatement"
-                  />
-                </template>
-              </template>
-            </section>
-            <IssueDescriptionPanel
-              :issue="issue"
-              :create="state.create"
-              :allow-edit="allowEditNameAndDescription"
-              @update-description="updateDescription"
-            />
-            <section
-              v-if="!state.create"
-              aria-labelledby="activity-title"
-              class="mt-4"
-            >
-              <IssueActivityPanel
-                :issue="issue"
-                :issue-template="issueTemplate"
-                @add-subscriber-id="addSubscriberId"
-              />
-            </section>
-          </div>
-        </div>
-      </div>
-    </main>
+  <IssueDetailLayout
+    v-if="issue"
+    :issue="issue"
+    :create="state.create"
+    @status-changed="onStatusChanged"
+  />
+  <div v-else class="w-full h-full flex justify-center items-center">
+    <NSpin />
   </div>
 </template>
 
@@ -219,68 +22,31 @@ import {
   defineComponent,
 } from "vue";
 import { useStore } from "vuex";
-import { useRouter } from "vue-router";
-import cloneDeep from "lodash-es/cloneDeep";
-import isEqual from "lodash-es/isEqual";
-import {
-  idFromSlug,
-  issueSlug,
-  pipelineType,
-  PipelineType,
-  indexFromSlug,
-  activeStage,
-  stageSlug,
-  activeTask,
-} from "../utils";
-import IssueHighlightPanel from "../components/IssueHighlightPanel.vue";
-import IssueStagePanel from "../components/IssueStagePanel.vue";
-import IssueOutputPanel from "../components/IssueOutputPanel.vue";
-import IssueTaskStatementPanel from "../components/IssueTaskStatementPanel.vue";
-import IssueDescriptionPanel from "../components/IssueDescriptionPanel.vue";
-import IssueActivityPanel from "../components/IssueActivityPanel.vue";
-import IssueSidebar from "../components/IssueSidebar.vue";
-import IssueStatusTransitionButtonGroup from "../components/IssueStatusTransitionButtonGroup.vue";
-import PipelineSimpleFlow from "./PipelineSimpleFlow.vue";
-import TaskCheckBar from "../components/TaskCheckBar.vue";
+import { useRoute, useRouter } from "vue-router";
+import { idFromSlug } from "../utils";
+import { IssueDetailLayout } from "../components/Issue";
 import {
   UNKNOWN_ID,
   Issue,
   IssueCreate,
   IssueType,
-  IssuePatch,
-  PrincipalId,
   Database,
-  Instance,
   Environment,
-  Stage,
-  StageId,
-  IssueStatus,
-  TaskId,
-  TaskStatusPatch,
-  TaskStatus,
-  IssueStatusPatch,
-  Task,
   TaskDatabaseSchemaUpdatePayload,
-  StageCreate,
-  TaskCreate,
-  TaskDatabaseCreatePayload,
-  TaskGeneralPayload,
   NORMAL_POLL_INTERVAL,
   POLL_JITTER,
   POST_CHANGE_POLL_INTERVAL,
   Project,
-  MigrationType,
-  TaskPatch,
   Policy,
+  unknown,
 } from "../types";
 import {
-  defaulTemplate,
+  defaulTemplate as defaultTemplate,
   templateForType,
-  InputField,
-  OutputField,
   IssueTemplate,
 } from "../plugins";
 import { isEmpty } from "lodash-es";
+import { NSpin } from "naive-ui";
 
 interface LocalState {
   // Needs to maintain this state and set it to false manually after creating the issue.
@@ -295,16 +61,8 @@ interface LocalState {
 export default defineComponent({
   name: "IssueDetail",
   components: {
-    IssueHighlightPanel,
-    IssueStagePanel,
-    IssueOutputPanel,
-    IssueTaskStatementPanel,
-    IssueDescriptionPanel,
-    IssueActivityPanel,
-    IssueSidebar,
-    IssueStatusTransitionButtonGroup,
-    PipelineSimpleFlow,
-    TaskCheckBar,
+    IssueDetailLayout,
+    NSpin,
   },
   props: {
     issueSlug: {
@@ -316,10 +74,11 @@ export default defineComponent({
   setup(props) {
     const store = useStore();
     const router = useRouter();
+    const route = useRoute();
 
     const currentUser = computed(() => store.getters["auth/currentUser"]());
 
-    let newIssueTemplate = ref<IssueTemplate>(defaulTemplate());
+    let newIssueTemplate = ref<IssueTemplate>(defaultTemplate());
 
     const refreshTemplate = () => {
       const issueType = router.currentRoute.value.query.template as IssueType;
@@ -338,7 +97,7 @@ export default defineComponent({
       }
 
       if (!newIssueTemplate.value) {
-        newIssueTemplate.value = defaulTemplate();
+        newIssueTemplate.value = defaultTemplate();
       }
     };
 
@@ -353,8 +112,93 @@ export default defineComponent({
 
     watchEffect(refreshTemplate);
 
-    const buildNewIssue = (): IssueCreate => {
+    const state = reactive<LocalState>({
+      create: props.issueSlug.toLowerCase() == "new",
+      newIssue: undefined,
+    });
+
+    const issue = computed((): Issue | IssueCreate => {
+      return state.create
+        ? state.newIssue
+        : store.getters["issue/issueById"](idFromSlug(props.issueSlug));
+    });
+
+    const buildNewTenantSchemaUpdateIssue = async (
+      project: Project
+    ): Promise<IssueCreate> => {
+      const baseTemplate = newIssueTemplate.value.buildIssue({
+        environmentList: [],
+        approvalPolicyList: [],
+        databaseList: [],
+        currentUser: currentUser.value,
+      });
+      const issueCreate: IssueCreate = {
+        projectId: project.id,
+        name: (route.query.name as string) || baseTemplate.name,
+        type: "bb.issue.database.schema.update",
+        description: baseTemplate.description,
+        assigneeId: currentUser.value.id,
+        createContext: {
+          migrationType: "MIGRATE",
+          updateSchemaDetailList: [
+            {
+              databaseName: route.query.databaseName,
+              statement: "-- YOUR_SQL_HERE",
+              rollbackStatement: "",
+            },
+          ],
+        },
+        payload: {},
+      };
+      const issue: Issue = await store.dispatch(
+        "issue/validateIssue",
+        issueCreate
+      );
+
+      issueCreate.assigneeId = baseTemplate.assigneeId;
+      issueCreate.pipeline = {
+        name: issue.pipeline.name,
+        stageList: issue.pipeline.stageList.map((stage) => ({
+          name: stage.name,
+          environmentId: stage.environment.id,
+          taskList: stage.taskList.map((task) => {
+            const payload = task.payload as TaskDatabaseSchemaUpdatePayload;
+            return {
+              name: task.name,
+              status: task.status,
+              type: task.type,
+              instanceId: task.instance.id,
+              databaseId: task.database?.id,
+              migrationType: payload.migrationType,
+              statement: payload.statement,
+              rollbackStatement: payload.rollbackStatement,
+              earliestAllowedTs: task.earliestAllowedTs,
+            };
+          }),
+        })),
+      };
+
+      return issueCreate;
+    };
+
+    const buildNewIssue = async (): Promise<IssueCreate | undefined> => {
       var newIssue: IssueCreate;
+
+      const projectId = route.query.project
+        ? parseInt(route.query.project as string)
+        : UNKNOWN_ID;
+      let project = unknown("PROJECT") as Project;
+      if (projectId !== UNKNOWN_ID) {
+        project = await store.dispatch("project/fetchProjectById", projectId);
+      }
+      const issueType = route.query.template as IssueType;
+      if (
+        project.tenantMode === "TENANT" &&
+        issueType === "bb.issue.database.schema.update"
+      ) {
+        newIssue = await buildNewTenantSchemaUpdateIssue(project);
+        return newIssue;
+      }
 
       // Create rollback issue
       if (router.currentRoute.value.query.rollbackIssue) {
@@ -450,7 +294,7 @@ export default defineComponent({
 
           if (environmentList.length == 0) {
             newIssue = {
-              ...defaulTemplate().buildIssue({
+              ...defaultTemplate().buildIssue({
                 environmentList: [],
                 approvalPolicyList: [],
                 databaseList: [],
@@ -479,7 +323,7 @@ export default defineComponent({
           }
         } else {
           newIssue = {
-            ...defaulTemplate().buildIssue({
+            ...defaultTemplate().buildIssue({
               environmentList: [],
               approvalPolicyList: [],
               databaseList: [],
@@ -575,12 +419,6 @@ export default defineComponent({
       return newIssue;
     };
 
-    const state = reactive<LocalState>({
-      create: props.issueSlug.toLowerCase() == "new",
-      newIssue:
-        props.issueSlug.toLowerCase() == "new" ? buildNewIssue() : undefined,
-    });
-
     // pollIssue invalidates the current timer and schedule a new timer in <<interval>> microseconds
     const pollIssue = (interval: number) => {
       if (state.pollIssueTimer) {
@@ -608,14 +446,11 @@ export default defineComponent({
       pollIssue(interval);
     };
 
-    onMounted(() => {
-      // Always scroll to top, the scrollBehavior doesn't seem to work.
-      // The hypothesis is that because the scroll bar is in the nested
-      // route, thus setting the scrollBehavior in the global router
-      // won't work.
-      document.getElementById("issue-detail-top")!.scrollIntoView();
+    onMounted(async () => {
       if (!state.create) {
         pollOnCreateStateChange();
+      } else {
+        state.newIssue = await buildNewIssue();
       }
     });
 
@@ -627,613 +462,26 @@ export default defineComponent({
 
     watch(
       () => props.issueSlug,
-      (cur) => {
+      async (cur) => {
         const oldCreate = state.create;
         state.create = cur.toLowerCase() == "new";
         if (!state.create && oldCreate) {
           pollOnCreateStateChange();
         } else if (state.create && !oldCreate) {
-          clearInterval(state.pollIssueTimer);
-          state.newIssue = buildNewIssue();
+          clearInterval(state.pollIssueTimer as any);
+          state.newIssue = await buildNewIssue();
         }
       }
     );
 
-    const issue = computed((): Issue | IssueCreate => {
-      return state.create
-        ? state.newIssue
-        : store.getters["issue/issueById"](idFromSlug(props.issueSlug));
-    });
-
-    const issueTemplate = computed(
-      () => templateForType(issue.value.type) || defaulTemplate()
-    );
-
-    const project = computed((): Project => {
-      if (state.create) {
-        return store.getters["project/projectById"](
-          (issue.value as IssueCreate).projectId
-        );
-      }
-      return (issue.value as Issue).project;
-    });
-
-    const updateName = (
-      newName: string,
-      postUpdated: (updatedIssue: Issue) => void
-    ) => {
-      if (state.create) {
-        state.newIssue!.name = newName;
-      } else {
-        patchIssue(
-          {
-            name: newName,
-          },
-          postUpdated
-        );
-      }
-    };
-
-    const updateStatement = (
-      newStatement: string,
-      postUpdated?: (updatedTask: Task) => void
-    ) => {
-      if (state.create) {
-        const stage = selectedStage.value as StageCreate;
-        stage.taskList[0].statement = newStatement;
-      } else {
-        patchTask(
-          (selectedTask.value as Task).id,
-          {
-            statement: newStatement,
-          },
-          postUpdated
-        );
-      }
-    };
-
-    const applyStatementToOtherStages = (newStatement: string) => {
-      for (const stage of (issue.value as IssueCreate).pipeline.stageList) {
-        for (const task of stage.taskList) {
-          if (
-            task.type == "bb.task.general" ||
-            task.type == "bb.task.database.create" ||
-            task.type == "bb.task.database.schema.update"
-          ) {
-            task.statement = newStatement;
-          }
-        }
-      }
-    };
-
-    const updateRollbackStatement = (newStatement: string) => {
-      const stage = selectedStage.value as StageCreate;
-      stage.taskList[0].rollbackStatement = newStatement;
-    };
-
-    const applyRollbackStatementToOtherStages = (newStatement: string) => {
-      for (const stage of (issue.value as IssueCreate).pipeline.stageList) {
-        for (const task of stage.taskList) {
-          if (task.type == "bb.task.database.schema.update") {
-            task.rollbackStatement = newStatement;
-          }
-        }
-      }
-    };
-
-    const updateDescription = (
-      newDescription: string,
-      postUpdated: (updatedIssue: Issue) => void
-    ) => {
-      if (state.create) {
-        state.newIssue!.description = newDescription;
-      } else {
-        patchIssue(
-          {
-            description: newDescription,
-          },
-          postUpdated
-        );
-      }
-    };
-
-    const updateAssigneeId = (newAssigneeId: PrincipalId) => {
-      if (state.create) {
-        state.newIssue!.assigneeId = newAssigneeId;
-      } else {
-        patchIssue({
-          assigneeId: newAssigneeId,
-        });
-      }
-    };
-
-    const updateEarliestAllowedTime = (newEarliestAllowedTsMs: number) => {
-      if (state.create) {
-        selectedTask.value.earliestAllowedTs = newEarliestAllowedTsMs;
-      } else {
-        const taskPatch: TaskPatch = {
-          earliestAllowedTs: newEarliestAllowedTsMs,
-        };
-        patchTask((selectedTask.value as Task).id, taskPatch);
-      }
-    };
-
-    const addSubscriberId = (subscriberId: PrincipalId) => {
-      store.dispatch("issueSubscriber/createSubscriber", {
-        issueId: (issue.value as Issue).id,
-        subscriberId,
-      });
-    };
-
-    const removeSubscriberId = (subscriberId: PrincipalId) => {
-      store.dispatch("issueSubscriber/deleteSubscriber", {
-        issueId: (issue.value as Issue).id,
-        subscriberId,
-      });
-    };
-
-    const updateCustomField = (field: InputField | OutputField, value: any) => {
-      if (!isEqual(issue.value.payload[field.id], value)) {
-        if (state.create) {
-          state.newIssue!.payload[field.id] = value;
-        } else {
-          const newPayload = cloneDeep(issue.value.payload);
-          newPayload[field.id] = value;
-          patchIssue({
-            payload: newPayload,
-          });
-        }
-      }
-    };
-
-    const doCreate = () => {
-      store
-        .dispatch("issue/createIssue", state.newIssue)
-        .then((createdIssue) => {
-          // Use replace to omit the new issue url in the navigation history.
-          router.replace(
-            `/issue/${issueSlug(createdIssue.name, createdIssue.id)}`
-          );
-        });
-    };
-
-    const doRollback = () => {
-      router.push({
-        name: "workspace.issue.detail",
-        params: {
-          issueSlug: "new",
-        },
-        query: {
-          template: "bb.issue.database.schema.update",
-          rollbackIssue: (issue.value as Issue).id,
-        },
-      });
-    };
-
-    const changeIssueStatus = (newStatus: IssueStatus, comment: string) => {
-      const issueStatusPatch: IssueStatusPatch = {
-        status: newStatus,
-        comment: comment,
-      };
-
-      store
-        .dispatch("issue/updateIssueStatus", {
-          issueId: (issue.value as Issue).id,
-          issueStatusPatch,
-        })
-        .then(() => {
-          pollIssue(POST_CHANGE_POLL_INTERVAL);
-        });
-    };
-
-    const changeTaskStatus = (
-      task: Task,
-      newStatus: TaskStatus,
-      comment: string
-    ) => {
-      // Switch to the stage view containing this task
-      selectStageId(task.stage.id);
-
-      const taskStatusPatch: TaskStatusPatch = {
-        status: newStatus,
-        comment: comment,
-      };
-
-      store
-        .dispatch("task/updateStatus", {
-          issueId: (issue.value as Issue).id,
-          pipelineId: (issue.value as Issue).pipeline.id,
-          taskId: task.id,
-          taskStatusPatch,
-        })
-        .then(() => {
-          pollIssue(POST_CHANGE_POLL_INTERVAL);
-        });
-    };
-
-    const runTaskChecks = (task: Task) => {
-      store
-        .dispatch("task/runChecks", {
-          issueId: (issue.value as Issue).id,
-          pipelineId: (issue.value as Issue).pipeline.id,
-          taskId: task.id,
-        })
-        .then(() => {
-          pollIssue(POST_CHANGE_POLL_INTERVAL);
-        });
-    };
-
-    const patchIssue = (
-      issuePatch: IssuePatch,
-      postUpdated?: (updatedIssue: Issue) => void
-    ) => {
-      store
-        .dispatch("issue/patchIssue", {
-          issueId: (issue.value as Issue).id,
-          issuePatch,
-        })
-        .then((updatedIssue) => {
-          // issue/patchIssue already fetches the new issue, so we schedule
-          // the next poll in NORMAL_POLL_INTERVAL
-          pollIssue(NORMAL_POLL_INTERVAL);
-          if (postUpdated) {
-            postUpdated(updatedIssue);
-          }
-        });
-    };
-
-    const patchTask = (
-      taskId: TaskId,
-      taskPatch: TaskPatch,
-      postUpdated?: (updatedTask: Task) => void
-    ) => {
-      store
-        .dispatch("task/patchTask", {
-          issueId: (issue.value as Issue).id,
-          pipelineId: (issue.value as Issue).pipeline.id,
-          taskId,
-          taskPatch,
-        })
-        .then((updatedTask) => {
-          // For now, the only task/patchTask is to change statement, which will trigger async task check.
-          // Thus we use the short poll interval
-          pollIssue(POST_CHANGE_POLL_INTERVAL);
-          if (postUpdated) {
-            postUpdated(updatedTask);
-          }
-        });
-    };
-
-    const currentPipelineType = computed((): PipelineType => {
-      return pipelineType(issue.value.pipeline);
-    });
-
-    const selectedStage = computed((): Stage | StageCreate => {
-      const stageSlug = router.currentRoute.value.query.stage as string;
-      const taskSlug = router.currentRoute.value.query.task as string;
-      // For stage slug, we support both index based and id based.
-      // Index based is used when creating the new task and is the one used when clicking the UI.
-      // Id based is used when the context only has access to the stage id (e.g. Task only contains StageId)
-      if (stageSlug) {
-        const index = indexFromSlug(stageSlug);
-        if (index < issue.value.pipeline.stageList.length) {
-          return issue.value.pipeline.stageList[index];
-        }
-        const stageId = idFromSlug(stageSlug);
-        const stageList = (issue.value as Issue).pipeline.stageList;
-        for (const stage of stageList) {
-          if (stage.id == stageId) {
-            return stage;
-          }
-        }
-      } else if (!state.create && taskSlug) {
-        const taskId = idFromSlug(taskSlug);
-        const stageList = (issue.value as Issue).pipeline.stageList;
-        for (const stage of stageList) {
-          for (const task of stage.taskList) {
-            if (task.id == taskId) {
-              return stage;
-            }
-          }
-        }
-      }
-      if (state.create) {
-        return issue.value.pipeline.stageList[0];
-      }
-      return activeStage((issue.value as Issue).pipeline);
-    });
-
-    const selectStageId = (stageId: StageId) => {
-      const stageList = issue.value.pipeline.stageList;
-      const index = stageList.findIndex((item, index) => {
-        if (state.create) {
-          return index == stageId;
-        }
-        return (item as Stage).id == stageId;
-      });
-      router.replace({
-        name: "workspace.issue.detail",
-        query: {
-          ...router.currentRoute.value.query,
-          task: undefined,
-          stage: stageSlug(stageList[index].name, index),
-        },
-      });
-    };
-
-    const selectedTask = computed((): Task | TaskCreate => {
-      return selectedStage.value.taskList[0];
-    });
-
-    const statement = (stage: Stage): string => {
-      const task = stage.taskList[0];
-      switch (task.type) {
-        case "bb.task.general":
-          return ((task as Task).payload as TaskGeneralPayload).statement || "";
-        case "bb.task.database.create":
-          return (
-            ((task as Task).payload as TaskDatabaseCreatePayload).statement ||
-            ""
-          );
-        case "bb.task.database.schema.update":
-          return (
-            ((task as Task).payload as TaskDatabaseSchemaUpdatePayload)
-              .statement || ""
-          );
-        case "bb.task.database.restore":
-          return "";
-      }
-    };
-
-    const rollbackStatement = (stage: Stage): string => {
-      const task = stage.taskList[0];
-      return (
-        (task.payload as TaskDatabaseSchemaUpdatePayload).rollbackStatement ||
-        ""
-      );
-    };
-
-    const selectedStatement = computed((): string => {
-      const task = (selectedStage.value as StageCreate).taskList[0];
-      return task.statement;
-    });
-
-    const selectedRollbackStatement = computed((): string => {
-      const task = (selectedStage.value as StageCreate).taskList[0];
-      return task.rollbackStatement;
-    });
-
-    const selectedMigrateType = computed((): MigrationType => {
-      if (
-        !state.create &&
-        selectedTask.value.type == "bb.task.database.schema.update"
-      ) {
-        return (
-          (selectedTask.value as Task)
-            .payload as TaskDatabaseSchemaUpdatePayload
-        ).migrationType;
-      }
-      return "MIGRATE";
-    });
-
-    const allowEditSidebar = computed(() => {
-      // For now, we only allow assignee to update the field when the issue
-      // is 'OPEN'. This reduces flexibility as creator must ask assignee to
-      // change any fields if there is typo. On the other hand, this avoids
-      // the trouble that the creator changes field value when the creator
-      // is performing the issue based on the old value.
-      // For now, we choose to be on the safe side at the cost of flexibility.
-      return (
-        state.create ||
-        ((issue.value as Issue).status == "OPEN" &&
-          (issue.value as Issue).assignee?.id == currentUser.value.id)
-      );
-    });
-
-    const allowEditOutput = computed(() => {
-      return (
-        state.create ||
-        ((issue.value as Issue).status == "OPEN" &&
-          (issue.value as Issue).assignee?.id == currentUser.value.id)
-      );
-    });
-
-    const allowEditNameAndDescription = computed(() => {
-      return (
-        state.create ||
-        ((issue.value as Issue).status == "OPEN" &&
-          ((issue.value as Issue).assignee?.id == currentUser.value.id ||
-            (issue.value as Issue).creator.id == currentUser.value.id))
-      );
-    });
-
-    const allowEditStatement = computed(() => {
-      return (
-        state.create ||
-        ((issue.value as Issue).status == "OPEN" &&
-          (issue.value as Issue).creator.id == currentUser.value.id &&
-          // Only allow if it's UI workflow
-          (issue.value as Issue).project.workflowType == "UI" &&
-          (selectedTask.value.status == "PENDING" ||
-            selectedTask.value.status == "PENDING_APPROVAL" ||
-            selectedTask.value.status == "FAILED"))
-      );
-    });
-
-    // For now, we only support rollback for schema update issue when all below conditions met:
-    // 1. Issue is in DONE or CANCELED state
-    // 2. There is at least one completed schema update task and the task contains the rollback statement.
-    const allowRollback = computed(() => {
-      if (!state.create) {
-        if (issue.value.type == "bb.issue.database.schema.update") {
-          if (
-            (issue.value as Issue).status == "DONE" ||
-            (issue.value as Issue).status == "CANCELED"
-          ) {
-            for (const stage of (issue.value as Issue).pipeline.stageList) {
-              for (const task of stage.taskList) {
-                if (
-                  task.status == "DONE" &&
-                  task.type == "bb.task.database.schema.update" &&
-                  !isEmpty(
-                    (task.payload as TaskDatabaseSchemaUpdatePayload)
-                      .rollbackStatement
-                  )
-                ) {
-                  return true;
-                }
-              }
-            }
-          }
-        }
-      }
-      return false;
-    });
-
-    const showCancelBanner = computed(() => {
-      return !state.create && (issue.value as Issue).status == "CANCELED";
-    });
-
-    const showSuccessBanner = computed(() => {
-      return !state.create && (issue.value as Issue).status == "DONE";
-    });
-
-    const showPendingApproval = computed(() => {
-      if (state.create) {
-        return false;
-      }
-
-      const task = activeTask((issue.value as Issue).pipeline);
-      return task.status == "PENDING_APPROVAL";
-    });
-
-    const showPipelineFlowBar = computed(() => {
-      return currentPipelineType.value != "NO_PIPELINE";
-    });
-
-    const showIssueOutputPanel = computed(() => {
-      return !state.create && issueTemplate.value.outputFieldList.length > 0;
-    });
-
-    const showIssueTaskStatementPanel = computed(() => {
-      const task = selectedTask.value;
-      return (
-        task.type == "bb.task.general" ||
-        task.type == "bb.task.database.create" ||
-        task.type == "bb.task.database.schema.update"
-      );
-    });
-
-    const showIssueTaskRollbackStatementPanel = computed(() => {
-      if (project.value.workflowType == "UI") {
-        return issue.value.type == "bb.issue.database.schema.update";
-      }
-      return false;
-    });
-
-    const showIssueTaskStatementApply = computed(() => {
-      if (!state.create) {
-        return false;
-      }
-      let count = 0;
-      for (const stage of (issue.value as IssueCreate).pipeline.stageList) {
-        for (const task of stage.taskList) {
-          if (
-            task.type == "bb.task.general" ||
-            task.type == "bb.task.database.create" ||
-            task.type == "bb.task.database.schema.update"
-          ) {
-            count++;
-          }
-        }
-      }
-      return count > 1;
-    });
-
-    const database = computed((): Database | undefined => {
-      if (state.create) {
-        const databaseId = selectedStage.value.taskList[0].databaseId;
-        if (databaseId) {
-          return store.getters["database/databaseById"](databaseId);
-        }
-        return undefined;
-      }
-      return selectedStage.value.taskList[0].database;
-    });
-
-    const instance = computed((): Instance => {
-      if (state.create) {
-        // If database is available, then we derive the instance from database because we always fetch database's instance.
-        if (database.value) {
-          return database.value.instance;
-        }
-        return store.getters["instance/instanceById"](
-          selectedStage.value.taskList[0].instanceId
-        );
-      }
-      return selectedStage.value.taskList[0].instance;
-    });
-
-    const sqlHint = (isRollBack: boolean): string | undefined => {
-      if (
-        !isRollBack &&
-        !state.create &&
-        selectedMigrateType.value == "BASELINE"
-      ) {
-        return `This is a baseline migration and bytebase won't apply the SQL to the database, it will only record a baseline history`;
-      }
-      if (!isRollBack && instance.value.engine === "SNOWFLAKE") {
-        return `Use <<schema>>.<<table>> to specify a Snowflake table`;
-      }
-      return undefined;
+    const onStatusChanged = (eager: boolean) => {
+      pollIssue(eager ? POST_CHANGE_POLL_INTERVAL : NORMAL_POLL_INTERVAL);
     };
 
     return {
       state,
       issue,
-      database,
-      instance,
-      sqlHint,
-      updateName,
-      updateDescription,
-      updateStatement,
-      updateEarliestAllowedTime,
-      applyStatementToOtherStages,
-      updateRollbackStatement,
-      applyRollbackStatementToOtherStages,
-      updateAssigneeId,
-      addSubscriberId,
-      removeSubscriberId,
-      updateCustomField,
-      doCreate,
-      doRollback,
-      changeIssueStatus,
-      changeTaskStatus,
-      runTaskChecks,
-      currentPipelineType,
-      currentUser,
-      issueTemplate,
-      selectedStage,
-      selectedTask,
-      selectStageId,
-      statement,
-      rollbackStatement,
-      selectedStatement,
-      selectedRollbackStatement,
-      selectedMigrateType,
-      allowEditSidebar,
-      allowEditOutput,
-      allowEditNameAndDescription,
-      allowEditStatement,
-      allowRollback,
-      showCancelBanner,
-      showSuccessBanner,
-      showPendingApproval,
-      showPipelineFlowBar,
-      showIssueOutputPanel,
-      showIssueTaskStatementPanel,
-      showIssueTaskRollbackStatementPanel,
-      showIssueTaskStatementApply,
+      onStatusChanged,
     };
   },
 });

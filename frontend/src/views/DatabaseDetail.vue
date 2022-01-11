@@ -177,7 +177,7 @@
       :tab-item-list="tabItemList"
       :selected-index="state.selectedIndex"
       @select-index="
-        (index) => {
+        (index: number) => {
           selectTab(index);
         }
       "
@@ -223,7 +223,6 @@ import {
   Database,
   DatabaseLabel,
 } from "../types";
-import { isEmpty } from "lodash-es";
 import { BBTabFilterItem } from "../bbkit/types";
 import { useI18n } from "vue-i18n";
 
@@ -388,6 +387,7 @@ export default defineComponent({
             name: `[${database.value.name}] Alter schema`,
             project: database.value.project.id,
             databaseList: database.value.id,
+            databaseName: database.value.name,
           },
         });
       } else if (database.value.project.workflowType == "VCS") {
