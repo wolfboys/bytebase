@@ -37,15 +37,9 @@
           :pipeline="issue.pipeline"
           :selected-stage="selectedStage"
           :selected-task="selectedTask"
-          class="border-t"
+          class="border-t border-b"
           @select-stage-id="selectStageId"
           @select-task="selectTask"
-        />
-        <DatabaseInfo
-          v-if="database"
-          :database="database"
-          class="border-t"
-          :class="create ? ['border-b', 'pb-2'] : ''"
         />
       </template>
       <template v-else>
