@@ -6,9 +6,9 @@
     <div
       v-for="(item, i) in itemList"
       :key="i"
-      class="stage-full md:flex md:flex-col items-center justify-start"
+      class="stage-wrapper md:flex md:flex-col items-center justify-start"
     >
-      <div class="stage" :class="stageClass(item.stage)">
+      <div class="stage-header" :class="stageClass(item.stage)">
         <span class="pl-4 py-2 flex items-center text-sm font-medium">
           <TaskStatusIcon
             :create="create"
@@ -65,12 +65,12 @@
       </div>
 
       <div
-        class="tasks divide-y w-full lg:grid"
+        class="task-list divide-y w-full lg:grid"
         :class="`grid-rows-${item.taskList.length}`"
       >
         <div v-for="(task, j) in item.taskList" :key="j" class="w-full">
           <div
-            class="task px-3 py-1 cursor-pointer select-none w-full border-2 border-transparent"
+            class="task px-3 py-1 cursor-pointer select-none w-full border border-transparent"
             :class="taskClass(task)"
             @click="
               clickTask(item.stageId, task.name, create ? j + 1 : task.id)
@@ -296,47 +296,47 @@ export default defineComponent({
 </script>
 
 <style scoped lang="postcss">
-.stage {
+.stage-header {
   @apply cursor-default flex items-center justify-start w-full relative border-b;
 }
 
-.stage.selected .text {
+.stage-header.selected .text {
   @apply underline;
 }
-.stage.active .text {
+.stage-header.active .text {
   @apply font-bold;
 }
-.stage.status_done .text {
+.stage-header.status_done .text {
   @apply text-control;
 }
-.stage.status_pending .text,
-.stage.status_pending_approval .text {
+.stage-header.status_pending .text,
+.stage-header.status_pending_approval .text {
   @apply text-control;
 }
-.stage.active.status_pending .text,
-.stage.active.status_pending_approval .text {
+.stage-header.active.status_pending .text,
+.stage-header.active.status_pending_approval .text {
   @apply text-info;
 }
-.stage.status_running .text {
+.stage-header.status_running .text {
   @apply text-info;
 }
-.stage.status_failed .text {
+.stage-header.status_failed .text {
   @apply text-red-500;
 }
 
 @media (min-width: theme("screens.lg")) {
-  .stage-full .tasks {
+  .stage-wrapper .task-list {
     @apply -ml-5 mr-5;
   }
-  .stage-full:first-child .tasks {
+  .stage-wrapper:first-child .task-list {
     width: calc(100% - theme("margin.5"));
     @apply ml-0 mr-5;
   }
-  .stage-full:last-child .tasks {
+  .stage-wrapper:last-child .task-list {
     width: calc(100% + theme("margin.5"));
     @apply -ml-5 mr-0;
   }
-  .stage-full:not(:last-child) .tasks {
+  .stage-wrapper:not(:last-child) .task-list {
     @apply border-r;
   }
 }
