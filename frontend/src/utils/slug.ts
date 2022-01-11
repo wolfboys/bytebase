@@ -8,7 +8,6 @@ import {
   MigrationHistoryId,
   Project,
   ProjectWebhook,
-  Task,
   VCS,
 } from "../types";
 import { IdType } from "../types/id";
