@@ -83,6 +83,10 @@
                 :status="task.status"
                 class="transform scale-75"
               />
+              <heroicons-solid:arrow-narrow-right
+                v-if="isActiveTask(task)"
+                class="name w-5 h-5"
+              />
               <div class="name">
                 {{ j + 1 }} - {{ databaseForTask(task).name }}
               </div>
