@@ -388,7 +388,6 @@ export default defineComponent({
             name: `[${database.value.name}] Alter schema`,
             project: database.value.project.id,
             databaseList: database.value.id,
-            databaseName: database.value.name,
           },
         });
       } else if (database.value.project.workflowType == "VCS") {

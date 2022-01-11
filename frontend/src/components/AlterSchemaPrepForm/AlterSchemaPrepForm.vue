@@ -90,8 +90,6 @@ import {
   baseDirectoryWebUrl,
   Database,
   DatabaseId,
-  Issue,
-  IssueCreate,
   Principal,
   Project,
   ProjectId,
@@ -231,7 +229,13 @@ export default defineComponent({
       });
     };
 
-    const allowGenerateTenant = computed(() => !!state.selectedDatabaseName);
+    const allowGenerateTenant = computed(() => {
+      if (!state.selectedDatabaseName) return false;
+
+      // TODO: return false when database list filtered by deployment config is empty
+
+      return true;
+    });
 
     const generateTenant = async () => {
       emit("dismiss");
@@ -256,6 +260,7 @@ export default defineComponent({
             name: `[${state.selectedDatabaseName}] Alter schema`,
             project: project.id,
             databaseName: state.selectedDatabaseName,
+            mode: "tenant",
           },
         });
       } else if (project.workflowType === "VCS") {

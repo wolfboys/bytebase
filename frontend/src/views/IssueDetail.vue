@@ -181,8 +181,12 @@ export default defineComponent({
       return issueCreate;
     };
 
-    const buildNewIssue = async (): Promise<IssueCreate | undefined> => {
-      var newIssue: IssueCreate;
+    const maybeBuildTenantDeployIssue = async (): Promise<
+      IssueCreate | false
+    > => {
+      if (route.query.mode !== "tenant") {
+        return false;
+      }
 
       const projectId = route.query.project
         ? parseInt(route.query.project as string)
@@ -196,10 +200,18 @@ export default defineComponent({
         project.tenantMode === "TENANT" &&
         issueType === "bb.issue.database.schema.update"
       ) {
-        newIssue = await buildNewTenantSchemaUpdateIssue(project);
-        return newIssue;
+        return buildNewTenantSchemaUpdateIssue(project);
+      }
+      return false;
+    };
+
+    const buildNewIssue = async (): Promise<IssueCreate | undefined> => {
+      const tenant = await maybeBuildTenantDeployIssue();
+      if (tenant) {
+        return tenant;
       }
 
+      var newIssue: IssueCreate;
       // Create rollback issue
       if (router.currentRoute.value.query.rollbackIssue) {
         const rollbackIssue: Issue = store.getters["issue/issueById"](
