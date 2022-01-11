@@ -143,7 +143,7 @@ export default defineComponent({
           updateSchemaDetailList: [
             {
               databaseName: route.query.databaseName,
-              statement: "-- YOUR_SQL_HERE",
+              statement: "/* YOUR_SQL_HERE */",
               rollbackStatement: "",
             },
           ],
