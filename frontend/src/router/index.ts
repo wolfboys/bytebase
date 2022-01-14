@@ -322,7 +322,8 @@ const routes: Array<RouteRecordRaw> = [
                 path: "subscription",
                 name: "setting.workspace.subscription",
                 meta: { title: () => t("settings.sidebar.subscription") },
-                component: () => import("../views/SettingWorkspaceSubscription.vue"),
+                component: () =>
+                  import("../views/SettingWorkspaceSubscription.vue"),
                 props: true,
               },
               {
@@ -791,14 +792,19 @@ router.beforeEach((to, from, next) => {
     store.dispatch("router/setBackPath", from.fullPath);
   }
 
+  // for now, we may initiate a oauth-callback at to senarios:
+  // 1. users try to login via oauth.
+  // 2. users try to bind a vcs to her projects.
+  if (to.name === "oauth-callback") {
+    next();
+  }
+
   if (
     to.name === SIGNIN_MODULE ||
     to.name === SIGNUP_MODULE ||
     to.name === ACTIVATE_MODULE ||
     to.name === PASSWORD_RESET_MODULE ||
-    to.name === PASSWORD_FORGOT_MODULE ||
-    // this is for oauth login
-    to.name === "oauth-callback"
+    to.name === PASSWORD_FORGOT_MODULE
   ) {
     if (isLoggedIn) {
       next({ name: HOME_MODULE, replace: true });
@@ -884,7 +890,6 @@ router.beforeEach((to, from, next) => {
     to.name === "error.403" ||
     to.name === "error.404" ||
     to.name === "error.500" ||
-    to.name === "oauth-callback" ||
     to.name === "workspace.home" ||
     to.name === "workspace.inbox" ||
     to.name === "workspace.anomaly-center" ||
