@@ -114,6 +114,19 @@ type fileCommit struct {
 	LastCommitID  string `json:"last_commit_id,omitempty"`
 }
 
+type UserAccessLevel int
+
+// see https://docs.gitlab.com/ee/api/members.html
+const (
+	UserAccessLevelNoAccess      UserAccessLevel = 0
+	UserAccessLevelMinimalAccess UserAccessLevel = 5
+	UserAccessLevelGuest         UserAccessLevel = 10
+	UserAccessLevelReporter      UserAccessLevel = 20
+	UserAccessLevelDeveloper     UserAccessLevel = 30
+	UserAccessLevelMaintainer    UserAccessLevel = 40
+	UserAccessLevelOwner         UserAccessLevel = 50
+)
+
 // fileMeta is the API message for file metadata.
 type fileMeta struct {
 	LastCommitID string `json:"last_commit_id"`

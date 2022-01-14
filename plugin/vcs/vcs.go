@@ -72,11 +72,14 @@ const (
 	UserStateArchived UserState = "archived"
 )
 
+type Role string
+
 // UserInfo is the API message for user info.
 type UserInfo struct {
 	Email string    `json:"email"`
 	Name  string    `json:"name"`
 	State UserState `json:"state"`
+	Role  Role      `json:"role"`
 }
 
 type Provider interface {
